@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024 Tiny Tapeout LTD
  * SPDX-License-Identifier: Apache-2.0
- * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
+ * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh,
  * Abdulatif Babli, K Arjunav, Cameron Brizland
  * Adapted from Logo.v by Uri Shaked
  */
@@ -10,7 +10,7 @@
 //TT Pinout (standard for TT projects - can't change this)
 
 
-module tt_um_tiny_tapestation ( 
+module tt_um_tiny_tapestation (
 
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
@@ -19,7 +19,7 @@ module tt_um_tiny_tapestation (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     // input  wire       ena,      // always 1 when the design is powered, so can ignore it
     input  wire       clk,      // clock (100MHz FPGA in)
-    input  wire       rst_n     // reset_n - low to reset   
+    input  wire       rst_n     // reset_n - low to reset
 );
 
     //clock signals
@@ -40,58 +40,80 @@ module tt_um_tiny_tapestation (
     wire pixel_value;
     wire frame_end;
 
+    // Interface signals between input modules
+    wire data_line;
+    wire nes_latch;
+    wire nes_clk;
+
+    // Output signals from nesReciver
+    wire A_out;
+    wire B_out;
+    wire select_out;
+    wire start_out;
+    wire up_out;
+    wire down_out;
+    wire left_out;
+    wire right_out;
+
     // TODO - input = ui_in, output = nes Reciver
     GamepadEmulator nesPad (
-        .clk(clk_50MHz),           // System clock
-        .reset(),         // Reset signal
-        .a_button(),
-        .b_button(),
-        .select_button(),
-        .start_button(),
-        .up_button(),
-        .down_button(),
-        .left_button(),
-        .right_button(),
-        .data()           // Serial data output
-    ); 
-
-
-    //TODO - setup the system and pass through to the input controller - input nes clk??
-    InputReciever nesReciver (
-
-
-
-
+        .clk(system_clk_50MHz), // System clock
+        .reset(~rst_n), // Reset signal
+        .a_button(ui_in[0]), // A button
+        .b_button(ui_in[1]), // B button
+        .select_button(ui_in[2]), // Select button
+        .start_button(ui_in[3]), // Start button
+        .up_button(ui_in[4]), // Up button
+        .down_button(ui_in[5]), // Down button
+        .left_button(ui_in[6]), // Left button
+        .right_button(ui_in[7]), // Right button
+        .data(data_line)
     );
 
+    // TODO - setup the system and pass through to the input controller - input nes clk??
+    InputReciever nesReciver (
+        .clk(system_clk_50MHz),
+        .reset(~rst_n),
+        .data(data_line),
+        .latch(nes_latch),
+        .nes_clk(nes_clk),
+        .A(A_out),
+        .B(B_out),
+        .select(select_out),
+        .start(start_out),
+        .up(up_out),
+        .down(down_out),
+        .left(left_out),
+        .right(right_out)
+    );
 
     // input signals
     wire [4:0] input_data; // register to hold the 5 possible player actions
 
     // TODO - set this up
-    InputBuffer ic(  
+    InputBuffer ic(
         .reset(frame_end),
-        .up(ui_in[0]),          // change this 
-        .down(ui_in[1]),
-        .left(ui_in[2]),
-        .right(ui_in[3]),
-        .attack(ui_in[4]),
+        .up(up_out),          // change this
+        .down(down_out),
+        .left(left_out),
+        .right(right_out),
+        .attack(A_out),
         .control_state(input_data)
     );
 
     //player logic
     wire [7:0] player_pos;   // player position xxxx_yyyy
-    // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
-    wire [1:0] player_orientation;   // player orientation 
+    // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left
+    wire [1:0] player_orientation;   // player orientation
     wire [1:0] player_direction;   // player direction
     wire [3:0] player_sprite;
 
     wire [7:0] sword_position; // sword position xxxx_yyyy
     wire [3:0] sword_visible;
-    wire [1:0] sword_orientation;   // sword orientation 
+    wire [1:0] sword_orientation;   // sword orientation
 
     PlayerLogic playerLogic(
-        .clk(clk_25MHz),
+        .clk(pixel_clk_25MHz),
         .reset(~rst_n),
         .input_data(input_data),
         .frame_end(frame_end),
@@ -118,7 +140,7 @@ module tt_um_tiny_tapestation (
 
     PictureProcessingUnit ppu (
 
-        .clk_in                  (clk_25MHz),
+        .clk_in                  (pixel_clk_25MHz),
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
@@ -141,7 +163,7 @@ module tt_um_tiny_tapestation (
         .colour                  (pixel_value)
     );
 
-    // CLKWIZ for dividing 
+    // CLKWIZ for dividing
 
     // 100MHZ -> 25MHz 
     // 100MHz -> 50MHz
@@ -151,15 +173,15 @@ module tt_um_tiny_tapestation (
     (
      .clk_in1(clk),      // input clk_in1
      .reset(~rst_n),           // input reset
-     .clk_25MHz(clk_25MHz),     // output clk_25MHz
-     .clk_50MHz(clk_50MHz)     // output clk_50MHz
+     .pixel_clk_25MHz(pixel_clk_25MHz),     // output pixel_clk_25MHz
+     .system_clk_50MHz(system_clk_50MHz)     // output system_clk_50MHz
     );
 
     
     // synchronisation unit
 
     SyncGenerator syncGen (
-        .clk(clk_25MHz),
+        .clk(pixel_clk_25MHz),
         .reset(~rst_n),
         .hsync(hsync),
         .vsync(vsync),
@@ -175,7 +197,7 @@ module tt_um_tiny_tapestation (
     wire [5:0] movement_delay_counter;
 
     DragonHead dragonHead( 
-        .clk(clk_25MHz),
+        .clk(pixel_clk_25MHz),
         .reset(~rst_n),
         .player_pos(player_pos),
     
@@ -188,7 +210,7 @@ module tt_um_tiny_tapestation (
 
 
     DragonBody dragonBody(
-        .clk(clk_25MHz),
+        .clk(pixel_clk_25MHz),
         .reset(~rst_n),
         .States(2'b01),
         .OrienAndPositon({dragon_direction,dragon_position}),
@@ -207,8 +229,7 @@ module tt_um_tiny_tapestation (
     );
 
     // display logic
-    always @(posedge clk_25MHz) begin
-        
+    always @(posedge pixel_clk_25MHz) begin
         if (~rst_n) begin
         R <= 0;
         G <= 0;
@@ -1619,7 +1640,7 @@ always @(negedge clk) begin //<<<<<IMPORTANT<<<<<< negedge is aviable in vga pla
                 // Update state
             current_state <= next_state;
 
-            sword_duration_flag_local <= sword_duration_flag; //�?曲�??八弯，用两个旗帜传递�?�?信�?�，�?��?�?Sword_duration和旗帜�?会多�?驱动
+            sword_duration_flag_local <= sword_duration_flag; //�?曲�??八弯，用两个旗帜传递�?�?信�?�，�?��?�?Sword_duration和旗帜�?会多�?驱动
             if(sword_duration_flag != sword_duration_flag_local)begin
                 sword_duration<=0;
             end else begin
