@@ -177,7 +177,7 @@ module tt_um_tiny_tapestation (
      .system_clk_50MHz(system_clk_50MHz)     // output system_clk_50MHz
     );
 
-    
+
     // synchronisation unit
 
     SyncGenerator syncGen (
