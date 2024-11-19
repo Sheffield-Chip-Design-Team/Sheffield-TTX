@@ -46,7 +46,7 @@ module InputReceiver (
     reg A_next, B_next, select_next, start_next, up_next, down_next, left_next, right_next;
 
     // infer all the registers
-    always @(posedge clk, posedge reset)
+    always @(posedge clk)
     if (reset) begin
         count_reg  <= 0;
         state_reg  <= 0;
@@ -58,6 +58,8 @@ module InputReceiver (
         down_reg   <= 0;
         left_reg   <= 0;
         right_reg  <= 0;
+        nes_clk    <= 0;
+        latch      <= 0;
     end else begin
         count_reg  <= count_next;
         state_reg  <= state_next;
@@ -72,10 +74,8 @@ module InputReceiver (
     end
 
     // FSM next-state logic and data path
-    always @* begin
+    always @(posedge clk) begin
         // defaults
-        latch       = 0;
-        nes_clk     = 0;
         count_next  = count_reg;
         A_next      = A_reg;
         B_next      = B_reg;
@@ -93,11 +93,14 @@ module InputReceiver (
             // assert latch pin
             latch = 1;
 
+            nes_clk = 0;  // nes_clk state
+
             // count 12 us
             if (count_reg < 600) count_next = count_reg + 1;
 
             // once 12 us passed
             else if (count_reg == 600) begin
+                latch = 0;  // deassert latch pin
                 count_next = 0;  // reset latch_count
                 state_next = read_A_wait;  // go to read_A_wait state
             end
@@ -105,6 +108,8 @@ module InputReceiver (
 
             read_A_wait: begin
                 if (count_reg == 0) A_next = data;  // read A
+
+                nes_clk = 0;  // nes_clk state
 
                 if (count_reg < 300)  // count clk cycles for 6 us
                     count_next = count_reg + 1;

@@ -71,7 +71,7 @@ module tt_um_tiny_tapestation (
     );
 
     // TODO - setup the system and pass through to the input controller - input nes clk??
-    InputReciever nesReciver (
+    InputReceiver nesReciver (
         .clk(system_clk_50MHz),
         .reset(~rst_n),
         .data(data_line),
@@ -914,8 +914,14 @@ module SyncGenerator (
 
 endmodule
 
-// --------------------
-// Module - NES Gamepad 
+
+// --------------------------------------
+// module: GamepadEmulator
+// Description: This module simulates the NES controller by taking in button inputs from the VGA playground
+// and outputting a serial data stream that can be read by the NES controller module.
+// Inputs: ui_in[7:0] - Button inputs from VGA playground
+// Outputs: data - Serial data output
+
 
 module GamepadEmulator (
     input wire clk,           // System clock
@@ -928,17 +934,12 @@ module GamepadEmulator (
     input wire down_button,
     input wire left_button,
     input wire right_button,
+    input wire nes_latch,         // Latch signal
+    input wire nes_clk,       // Clock signal for NES controller
     output reg data           // Serial data output
 );
-
-    // Timing counters (based on 50MHz clock)
-    // 18000ns = 900 clock cycles
-    // 12000ns = 600 clock cycles
-    reg [31:0] timing_counter;
     reg [2:0] state;
 
-    // States for the button sequence
-    localparam LATCH_ENABLE = 3'd0;
     localparam A_STATE      = 3'd0;
     localparam B_STATE      = 3'd1;
     localparam SELECT_STATE = 3'd2;
@@ -948,92 +949,75 @@ module GamepadEmulator (
     localparam LEFT_STATE   = 3'd6;
     localparam RIGHT_STATE  = 3'd7;
 
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            data <= 1;              // Data line pulled high when inactive
+    always@(posedge clk) begin
+        if(reset)begin
+            data = 1;
             state <= A_STATE;
-            timing_counter <= 0;
         end
-        else begin
+    end
+
+    always@(posedge nes_latch) begin
+        state <= A_STATE;
+    end
+
+    always @(posedge nes_clk) begin
+        if(!reset)begin
             case (state)
                 A_STATE: begin
-                    data <= ~a_button;
-                    if (timing_counter >= 900) begin  // 18000ns / 20ns (50MHz clock)
-                        state <= B_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~a_button;
+                    state <= B_STATE;
                 end
-
                 B_STATE: begin
-                    data <= ~b_button;
-                    if (timing_counter >= 600) begin  // 12000ns / 20ns
-                        state <= SELECT_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~b_button;
+                    state <= SELECT_STATE;
                 end
-
                 SELECT_STATE: begin
-                    data <= ~select_button;
-                    if (timing_counter >= 600) begin
-                        state <= START_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~select_button;
+                    state <= START_STATE;
                 end
-
                 START_STATE: begin
-                    data <= ~start_button;
-                    if (timing_counter >= 600) begin
-                        state <= UP_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~start_button;
+                    state <= UP_STATE;
                 end
-
                 UP_STATE: begin
-                    data <= ~up_button;
-                    if (timing_counter >= 600) begin
-                        state <= DOWN_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~up_button;
+                    state <= DOWN_STATE;
                 end
-
                 DOWN_STATE: begin
-                    data <= ~down_button;
-                    if (timing_counter >= 600) begin
-                        state <= LEFT_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~down_button;
+                    state <= LEFT_STATE;
                 end
-
                 LEFT_STATE: begin
-                    data <= ~left_button;
-                    if (timing_counter >= 600) begin
-                        state <= RIGHT_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    // data = ~left_button;
+                    state <= RIGHT_STATE;
                 end
-
                 RIGHT_STATE: begin
-                    data <= ~right_button;
-                    if (timing_counter >= 600) begin
-                        state <= A_STATE;
-                        timing_counter <= 0;
-                    end else
-                        timing_counter <= timing_counter + 1;
+                    state <= A_STATE;
                 end
-
-                default: state <= A_STATE;
+                default: begin
+                    state <= A_STATE;
+                end
             endcase
         end
     end
 
+
+    always @(clk) begin
+        case (state)
+            A_STATE: data = ~a_button;
+            B_STATE: data = ~b_button;
+            SELECT_STATE: data = ~select_button;
+            START_STATE: data = ~start_button;
+            UP_STATE: data = ~up_button;
+            DOWN_STATE: data = ~down_button;
+            LEFT_STATE: data = ~left_button;
+            RIGHT_STATE: data = ~right_button;
+            default: data = 1;
+        endcase
+    end
+
 endmodule
+
 
 // -----------------------------------
 
@@ -1048,334 +1032,256 @@ endmodule
 
 */
 
-module InputReciever
-	( 
-		input wire clk, reset, 
-		input wire data,                                        // input data from nes controller to FPGA
-		output reg latch, nes_clk,                              // outputs from FPGA to nes controller
-		output wire A, B, select, start, up, down, left, right,  // output states of nes controller buttons
-		
-		output wire A_pulse, B_pulse, select_pulse, start_pulse, // output pulses for button releases
-    	output wire up_pulse, down_pulse, left_pulse, right_pulse
-        );
-	
-	// FSM symbolic states
-	localparam [3:0] latch_en     = 4'h0,  // assert latch for 12 us
-			 read_A_wait  = 4'h1,  // read A / wait 6 us
-			 read_B       = 4'h2,  // read B ...
-			 read_select  = 4'h3,  
-		         read_start   = 4'h4,
-		         read_up      = 4'h5,
-			 read_down    = 4'h6,
-			 read_left    = 4'h7,
-			 read_right   = 4'h8;
+module InputReceiver (
+    input wire clk,
+    input wire reset,
+    input wire data,   // input data from nes controller to FPGA
+    output reg latch,
+    output reg nes_clk,  // outputs from FPGA to nes controller
+    output wire A,
+    output wire B,
+    output wire select,
+    output wire start,
+    output wire up,
+    output wire down,
+    output wire left,
+    output wire right  // output states of nes controller buttons
+);
 
-	// register to count clock cycles to time latch assertion, nes_clk state, and FSM state transitions		 
-	reg [10:0] count_reg, count_next;
-	
-	// FSM state register, and button state regs
-	reg [3:0] state_reg, state_next;
-	reg A_reg, B_reg, select_reg, start_reg,
-	    up_reg, down_reg, left_reg, right_reg;
-	reg A_next, B_next, select_next, start_next,
-	   up_next, down_next, left_next, right_next;
-	
-	// infer all the registers
-	always @(posedge clk, posedge reset)
-		if (reset)
-			begin
-				count_reg  <= 0;
-				state_reg  <= 0;
-				A_reg      <= 0;
-				B_reg      <= 0;
-				select_reg <= 0;
-				start_reg  <= 0;
-				up_reg     <= 0;
-				down_reg   <= 0;
-				left_reg   <= 0;
-				right_reg  <= 0;
-			end
-	    else
-			begin
-		        count_reg  <= count_next;
-				state_reg  <= state_next;
-				A_reg      <= A_next;
-				B_reg      <= B_next;
-				select_reg <= select_next;
-				start_reg  <= start_next;
-				up_reg     <= up_next;
-				down_reg   <= down_next;
-				left_reg   <= left_next;
-				right_reg  <= right_next;
-			end
+    // FSM symbolic states
+    localparam [3:0] latch_en = 4'h0;  // assert latch for 12 us
+    localparam [3:0] read_A_wait = 4'h1;
+    localparam [3:0] read_B = 4'h2;
+    localparam [3:0] read_select  = 4'h3;
+    localparam [3:0] read_start   = 4'h4;
+    localparam [3:0] read_up      = 4'h5;
+    localparam [3:0] read_down    = 4'h6;
+    localparam [3:0] read_left    = 4'h7;
+    localparam [3:0] read_right   = 4'h8;
 
-	// FSM next-state logic and data path
-	always@*
-		begin
-		// defaults
-		latch       = 0;
-		nes_clk     = 0;
-		count_next  = count_reg;
-		A_next      = A_reg;
-		B_next      = B_reg;
-		select_next = select_reg;
-		start_next  = start_reg;
-		up_next     = up_reg;
-		down_next   = down_reg;
-		left_next   = left_reg;
-		right_next  = right_reg;
-		state_next  = state_reg;
-		
-		case(state_reg)
-			
-			latch_en: 
-					begin
-					// assert latch pin
-					latch = 1;
-					
-					// count 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// once 12 us passed
-					else if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_A_wait; // go to read_A_wait state
-						end
-					end
-			
-			read_A_wait:
-					begin
-					if(count_reg == 0)
-						A_next = data; // read A
-					
-					if(count_reg < 300) // count clk cycles for 6 us
-						count_next = count_reg + 1;
-						
-					// once 6 us passed
-					else if(count_reg == 300)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_B; // go to read_B state
-						end
-					end
-			
-			read_B:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read B
-					if(count_reg == 300)
-						B_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_select; // go to read_select state
-						end
-					end
-			
-			read_select:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read select
-					if(count_reg == 300)
-						select_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_start; // go to read_start state
-						end
-					end			
-			
-			read_start:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read start
-					if(count_reg == 300)
-						start_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_up; // go to read_up state
-						end
-					end
-			
-			read_up:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read up
-					if(count_reg == 300)
-						up_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_down; // go to read_down state
-						end
-					end
-					
-			read_down:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read down
-					if(count_reg == 300)
-						down_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_left; // go to read_left state
-						end
-					end
-					
-			read_left:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read left
-					if(count_reg == 300)
-						left_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = read_right; // go to read_right state
-						end
-					end
-					
-			read_right:	
-					begin
-					// count clk cycles for 12 us
-					if(count_reg < 600)
-						count_next = count_reg + 1;
-					
-					// nes_clk state
-					if(count_reg <= 300)
-						nes_clk = 1;
-					else if(count_reg > 300)
-						nes_clk = 0;
-					
-					// read right
-					if(count_reg == 300)
-						right_next = data;
-					
-					// state over
-					if(count_reg == 600)
-						begin
-						count_next = 0; // reset latch_count
-						state_next = latch_en; // go to latch_en state
-						end
-					end
-		endcase
-		end
-		
-	// assign outputs, *normally asserted when unpressed
-	assign A      = ~A_reg;
-	assign B      = ~B_reg;
-	assign select = ~select_reg;
-	assign start  = ~start_reg;
-	assign up     = ~up_reg;
-	assign down   = ~down_reg;
-	assign left   = ~left_reg;
-	assign right  = ~right_reg;
+    // register to count clock cycles to time latch assertion, nes_clk state, and FSM state transitions	 
+    reg [10:0] count_reg, count_next;
 
+    // FSM state register, and button state regs
+    reg [3:0] state_reg, state_next;
+    reg A_reg, B_reg, select_reg, start_reg, up_reg, down_reg, left_reg, right_reg;
+    reg A_next, B_next, select_next, start_next, up_next, down_next, left_next, right_next;
 
-	// Generate enable signal
-    reg [26:0] counter; // 27 bits can count up to 134,217,727 ns at 50 MHz
-    wire enable;
-
-    assign enable = (counter >= 5105);  // Enable after 102,100,000 ns (5,105,000 clock cycles at 50 MHz)
-
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            counter <= 0;
-        end else if (!enable) begin
-            counter <= counter + 1;
-        end
+    // infer all the registers
+    always @(posedge clk)
+    if (reset) begin
+        count_reg  <= 0;
+        state_reg  <= 0;
+        A_reg      <= 0;
+        B_reg      <= 0;
+        select_reg <= 0;
+        start_reg  <= 0;
+        up_reg     <= 0;
+        down_reg   <= 0;
+        left_reg   <= 0;
+        right_reg  <= 0;
+        nes_clk    <= 0;
+        latch      <= 0;
+    end else begin
+        count_reg  <= count_next;
+        state_reg  <= state_next;
+        A_reg      <= A_next;
+        B_reg      <= B_next;
+        select_reg <= select_next;
+        start_reg  <= start_next;
+        up_reg     <= up_next;
+        down_reg   <= down_next;
+        left_reg   <= left_next;
+        right_reg  <= right_next;
     end
 
-    // Use generate blocks for conditional instantiation
-    genvar i;
-    generate
-        for (i = 0; i < 8; i = i + 1) begin : gen_pulse
-            wire button_in;
-            wire pulse_out;
-            reg button_reg;
+    // FSM next-state logic and data path
+    always @(posedge clk) begin
+        // defaults
+        count_next  = count_reg;
+        A_next      = A_reg;
+        B_next      = B_reg;
+        select_next = select_reg;
+        start_next  = start_reg;
+        up_next     = up_reg;
+        down_next   = down_reg;
+        left_next   = left_reg;
+        right_next  = right_reg;
+        state_next  = state_reg;
 
-            case (i)
-                0: begin assign button_in = A; assign A_pulse = pulse_out; always @(posedge clk) button_reg <= A_reg; end
-                1: begin assign button_in = B; assign B_pulse = pulse_out; always @(posedge clk) button_reg <= B_reg; end
-                2: begin assign button_in = select; assign select_pulse = pulse_out; always @(posedge clk) button_reg <= select_reg; end
-                3: begin assign button_in = start; assign start_pulse = pulse_out; always @(posedge clk) button_reg <= start_reg; end
-                4: begin assign button_in = up; assign up_pulse = pulse_out; always @(posedge clk) button_reg <= up_reg; end
-                5: begin assign button_in = down; assign down_pulse = pulse_out; always @(posedge clk) button_reg <= down_reg; end
-                6: begin assign button_in = left; assign left_pulse = pulse_out; always @(posedge clk) button_reg <= left_reg; end
-                7: begin assign button_in = right; assign right_pulse = pulse_out; always @(posedge clk) button_reg <= right_reg; end
-            endcase
-        end
-    endgenerate
+        case (state_reg)
+
+            latch_en: begin
+            // assert latch pin
+            latch = 1;
+
+            nes_clk = 0;  // nes_clk state
+
+            // count 12 us
+            if (count_reg < 600) count_next = count_reg + 1;
+
+            // once 12 us passed
+            else if (count_reg == 600) begin
+                latch = 0;  // deassert latch pin
+                count_next = 0;  // reset latch_count
+                state_next = read_A_wait;  // go to read_A_wait state
+            end
+            end
+
+            read_A_wait: begin
+                if (count_reg == 0) A_next = data;  // read A
+
+                nes_clk = 0;  // nes_clk state
+
+                if (count_reg < 300)  // count clk cycles for 6 us
+                    count_next = count_reg + 1;
+
+                // once 6 us passed
+                else if (count_reg == 300) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_B;  // go to read_B state
+                end
+            end
+
+            read_B: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read B
+                if (count_reg == 300) B_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_select;  // go to read_select state
+                end
+            end
+
+            read_select: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read select
+                if (count_reg == 300) select_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_start;  // go to read_start state
+                end
+            end
+
+            read_start: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read start
+                if (count_reg == 300) start_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_up;  // go to read_up state
+                end
+            end
+
+            read_up: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read up
+                if (count_reg == 300) up_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_down;  // go to read_down state
+                end
+            end
+
+            read_down: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read down
+                if (count_reg == 300) down_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_left;  // go to read_left state
+                end
+            end
+
+            read_left: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read left
+                if (count_reg == 300) left_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = read_right;  // go to read_right state
+                end
+            end
+
+            read_right: begin
+                // count clk cycles for 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
+
+                // nes_clk state
+                if (count_reg <= 300) nes_clk = 1;
+                else if (count_reg > 300) nes_clk = 0;
+
+                // read right
+                if (count_reg == 300) right_next = data;
+
+                // state over
+                if (count_reg == 600) begin
+                    count_next = 0;  // reset latch_count
+                    state_next = latch_en;  // go to latch_en state
+                end
+            end
+
+            default: state_next = latch_en;  // default state
+        endcase
+    end
+
+    // assign outputs, *normally asserted when unpressed
+    assign A      = ~A_reg;
+    assign B      = ~B_reg;
+    assign select = ~select_reg;
+    assign start  = ~start_reg;
+    assign up     = ~up_reg;
+    assign down   = ~down_reg;
+    assign left   = ~left_reg;
+    assign right  = ~right_reg;
 
 endmodule
 
@@ -1396,12 +1302,12 @@ module InputBuffer (
 
     input wire clk,
     input wire reset,
-    input wire up,            
+    input wire up,
     input wire down,
     input wire left,
     input wire right,
     input wire attack,
-    output reg [4:0] control_state 
+    output reg [4:0] control_state
 );
     initial begin
         control_state = 0;
@@ -1429,7 +1335,7 @@ module InputBuffer (
     end
 
     always @(posedge clk) begin
-        
+
         if (!reset) begin
             control_state <= control_state | pressed_buttons;
         end
@@ -1752,6 +1658,66 @@ always @(posedge clk) begin
     player_direction <= 2'b01;
     end
 end
+
+endmodule
+
+module clk_div (
+
+    input wire clk_in,
+    input wire reset,
+
+    output reg clk_out_25MHz,   
+    output reg clk_out_50MHz  
+    
+);
+
+    localparam DIV_CLK_0 = 4; //  25MHz
+    localparam DIV_CLK_1 = 2; //  50MHz
+    
+    reg[2:0] counter_0;
+    reg[2:0] counter_1;
+    
+    initial begin
+        clk_out_25MHz = 0;
+        clk_out_50MHz = 0;
+
+        counter_0 = 0;
+        counter_1 = 0;
+    end
+
+    always @(clk_in) begin
+     
+        if (reset) begin
+            counter_0 <= 0;
+            counter_1 <= 0;
+            clk_out_25MHz <= 0;
+            clk_out_50MHz <= 0;
+        end
+
+        else begin
+
+            if (counter_0 == DIV_CLK_0) begin
+                counter_0 <= 1;
+                clk_out_25MHz <= ~clk_out_25MHz;
+            end
+
+            else begin
+                counter_0 <= counter_0 + 1;
+            end
+
+
+            if (counter_1 == DIV_CLK_1) begin
+                counter_1 <= 1;
+                clk_out_50MHz <= ~clk_out_50MHz;
+            end
+        
+            else begin
+                counter_1 <= counter_1 + 1;
+            end
+
+        end
+
+    end
 
 endmodule
 
