@@ -4,7 +4,7 @@
 /*
    Author: Anubhav Avinaash, James Ashie Kotey, Bowen Shi
    Description:    
-               Player Logic FSM.
+         Player Logic FSM
    Last Updated:
 */
 
