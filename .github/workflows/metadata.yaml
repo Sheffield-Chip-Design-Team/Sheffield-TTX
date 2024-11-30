@@ -1,7 +1,10 @@
 name: Update File Metadata
 
 on:
+  push:
   workflow_dispatch:
+
+  
 
 permissions:
     contents: write
