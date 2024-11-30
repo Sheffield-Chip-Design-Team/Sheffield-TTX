@@ -93,7 +93,7 @@ if __name__ == "__main__":
             for line in buildfile:
 
                 if file_index == 0:
-                    if  "=== BUILD DEPENDENCIES ===" in line: #add metadata
+                    if  "=== BUILD DEPENDENCIES" in line: #add metadata
                         outputfile.write(f"// BUILD TIME: {current_time} \n") 
                         continue
 
@@ -109,7 +109,8 @@ if __name__ == "__main__":
                     includefile = includefile.removeprefix("`include")
                     includefile = includefile.strip()
                     includefile = includefile.replace('"', "")
-                    filenames.append( includefile)
+                    includefile = "src/" + includefile
+                    filenames.append(includefile)
                     print(f"INFO: Found dependency: '{includefile}'.")
                     continue 
 
