@@ -6,7 +6,7 @@
 `default_nettype none
 
 // === BUILD DEPENDENCIES ===
-// `include "full_adder.v"- 
+// `include "full_adder.v"
 // === PLEASE DON'T UN-COMMNENT IN REPO. ===
 
 module tt_um_Enjimneering_full_adder (
