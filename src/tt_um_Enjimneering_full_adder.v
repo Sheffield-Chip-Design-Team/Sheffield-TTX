@@ -20,7 +20,7 @@ module tt_um_Enjimneering_full_adder (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-//using full adder
+  // using full adder
   FullAdder fa (.a(ui_in[0]), .b(ui_in[1]), .c(ui_in[2]), .carry(uo_out[1]), .sum(uo_out[0]));
 
   // All output pins must be assigned. If not used, assign to 0.
