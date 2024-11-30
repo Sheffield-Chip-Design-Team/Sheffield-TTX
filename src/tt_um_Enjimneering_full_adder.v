@@ -7,7 +7,7 @@
 
 // === BUILD DEPENDENCIES ===
 // `include "full_adder.v"- 
-// Uncommenting the build dependency causes problems, don't do that.
+// === PLEASE DON'T UN-COMMNENT IN REPO. ===
 
 module tt_um_Enjimneering_full_adder (
     input  wire [7:0] ui_in,    // Dedicated inputs
