@@ -24,7 +24,10 @@ jobs:
 
       - name: check for changes
         run: git status
-        
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            
       - name: stage changed files
         run: git add .
         
