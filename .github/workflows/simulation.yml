@@ -35,5 +35,5 @@ jobs:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git add simulation/VGA_playground.v
-          git commit -m "[Automation]: Built Simulation File."
+          git commit -m "[Automation] Built Simulation File."
           git push origin main
