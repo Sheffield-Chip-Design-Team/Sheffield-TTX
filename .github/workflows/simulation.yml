@@ -21,24 +21,16 @@ jobs:
 
       - name: Execute Python script # Run the run.py to get the latest data
         run: python .github/workflows/scripts/buildsim.py src/tt_um_Enjimneering_full_adder.v -t tt_um_Enjimneering_full_adder  -o simulation/vga_playground.v
-            
-      - name: stage changed files
-        run: git add simulation/vga_playground.v
+        
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"    
+          
+      - name: Stage Commit and Push 
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-      - name: commit changed files
-        run: git commit -m "Built VGA Simulation File."
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-      - name: fetch from main
-        run: git fetch origin main
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-      - name: push code to master
-        run: git push origin HEAD:main
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+        run: |
+          git add simulation/vga_playground.v
+          git commit -m "Built Simulation File."
+          git push origin main
