@@ -2,7 +2,9 @@
 // Module: Player Logic
 
 /*
+   Author: Anubhav Avinaash, James Ashie Kotey, Bowen Shi
    Description:    
+               Player Logic FSM.
    Last Updated:
 */
 
