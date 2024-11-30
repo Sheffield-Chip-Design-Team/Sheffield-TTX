@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-// BUILD TIME: 2024-11-30 19:42:10.694939 
+// BUILD TIME: 2024-11-30 21:52:57.356749 
 
 module tt_um_vga_example (
     input  wire [7:0] ui_in,    // Dedicated inputs
@@ -18,7 +18,7 @@ module tt_um_vga_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-//using full adder
+  // using full adder
   FullAdder fa (.a(ui_in[0]), .b(ui_in[1]), .c(ui_in[2]), .carry(uo_out[1]), .sum(uo_out[0]));
 
   // All output pins must be assigned. If not used, assign to 0.
