@@ -21,3 +21,21 @@ jobs:
 
       - name: Execute Python script # Run the run.py to get the latest data
         run: python .github/workflows/scripts/buildsim.py src/tt_um_Enjimneering_full_adder.v -t tt_um_Enjimneering_full_adder  -o simulation/vga_playground.v
+    
+      - name: switching from HTTPS to SSH
+        run: git remote set-url origin ${{ secrets.ssh }}
+        
+      - name: check for changes
+        run: git status
+        
+      - name: stage changed files
+        run: git add .
+        
+      - name: commit changed files
+        run: git commit -m "built VGA Simulation File"
+        
+      - name: fetch from main
+        run: git fetch origin main
+        
+      - name: push code to master
+        run: git push origin HEAD:main
