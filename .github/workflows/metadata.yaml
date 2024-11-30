@@ -32,7 +32,7 @@ jobs:
           
       - name: Get Updated Files
         run: |
-          FILES=$(git diff --name-only HEAD HEAD~1)
+          FILES=$(git log -1 --name-only --pretty='')
           echo "Changed files: $FILES"
           echo "FILES=$FILES" >> $GITHUB_ENV
 
