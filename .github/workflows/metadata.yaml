@@ -32,9 +32,9 @@ jobs:
           
       - name: Get Updated Files
         run: |
-         echo "FILES={git show --name-only}" 
-         echo "Changed files: $FILES"
-         echo "::set-output name=files::$FILES"
+          FILES=$(git diff --name-only HEAD HEAD^)
+          echo "Changed files: $FILES"
+          echo "FILES=$FILES" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
         run: python .github/workflows/scripts/updatefileinfo.py $FILES
