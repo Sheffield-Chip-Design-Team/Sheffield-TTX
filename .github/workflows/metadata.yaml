@@ -45,9 +45,3 @@ jobs:
           git add $FILES
           git commit -m "[Automation] Updated Simulation File."
           git push origin main
-
-
-        
-      - name: Execute Auto-Update Script # Run the run.py to get the latest data
-        run: python .github/workflows/scripts/buildsim.py src/tt_um_Enjimneering_TTS.v -t tt_um_Enjimneering_top  -o simulation/VGA_playground.v
-        
