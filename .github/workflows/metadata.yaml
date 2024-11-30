@@ -31,10 +31,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com" 
           
       - name: Get Updated Files
-        env:  
-            GIT_SHA: ${{ github.sha }}
         run: |
-         echo "FILES={git diff-tree --no-commit-id --name-only -r ${{ github.sha }}}" 
+         echo "FILES={git show --name-only}" 
          echo "Changed files: $FILES"
          echo "::set-output name=files::$FILES"
 
