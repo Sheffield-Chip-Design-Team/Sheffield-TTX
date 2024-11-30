@@ -1,6 +1,11 @@
 
 // Module: Player Logic
 
+/*
+   Description:    
+   Last Updated:
+*/
+
 module PlayerLogic(
     input clk,
     input reset,
