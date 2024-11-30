@@ -20,4 +20,4 @@ jobs:
         run: python -m pip install --upgrade pip requests
 
       - name: Execute Python script # Run the run.py to get the latest data
-        run: python .github/workflows/scripts/buildsim.py src/src/tt_um_Enjimneering_full_adder.v -t tt_um_enjimneering_full_adder -o simulation/vga_playground.v
+        run: python .github/workflows/scripts/buildsim.py src/src/tt_um_Enjimneering_full_adder.v -t tt_um_Enjimneering_full_adder  -o simulation/vga_playground.v
