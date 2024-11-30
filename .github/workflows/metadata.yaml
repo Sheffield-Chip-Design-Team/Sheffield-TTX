@@ -30,7 +30,7 @@ jobs:
       - name: Get Updated Files
         env:  
             GIT_SHA: ${{ github.sha }}
-      - run: |
+        run: |
          FILES = $(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
          echo "Changed files: $FILES"
          echo "::set-output name=files::$FILES"
