@@ -1,10 +1,13 @@
 /*
- * Copyright (c) 2024 Your Name
+ * Copyright (c) 2024 - James Ashie Kotey
  * SPDX-License-Identifier: Apache-2.0
  */
 
 `default_nettype none
-// `include "full_adder.v"- THIS MAKES IT INCLUDE TWICE, DONT DO THAT
+
+// === BUILD DEPENDENCIES ===
+// `include "full_adder.v"- 
+// Uncommenting the build dependency causes problems, don't do that.
 
 module tt_um_Enjimneering_full_adder (
     input  wire [7:0] ui_in,    // Dedicated inputs
