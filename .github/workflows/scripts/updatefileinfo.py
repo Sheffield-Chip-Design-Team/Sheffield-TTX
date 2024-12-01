@@ -9,14 +9,17 @@ def getFileName(cmd_args):
     
     filename = ""
 
-    for arg in cmd_args:
-        
-        if ".v" in arg:
-            print(f"INFO: adding {arg} to update queue.")
-            filename = arg
-            break
-        else:
-            print(arg + " is not a valid verilog filename.")
+    argcount = 0
+    
+    for arg in cmd_args: # the first argcount will always be the name of the script - can ignore this.
+        if argcount != 0:
+            if ".v" in arg:
+                print(f"INFO: adding {arg} to update queue.")
+                filename = arg
+                break
+            else:
+                print(arg + " is not a valid verilog filename.")
+        argcount = argcount + !
 
     return filename
 
