@@ -34,17 +34,14 @@ jobs:
       - name: Get Updated Files
         id: get-update
         run: |
-            FILES=$(git diff HEAD HEAD~1 --name-only --pretty='')
+            FILES=$(git diff HEAD HEAD~1 --name-only --oneline --pretty='')
             echo "Changed files: $FILES>> "
             echo "FILES=$FILES" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
         run: |
-            {
-            echo 'ERRCODE<< '
-            $(python .github/workflows/scripts/updatefileinfo.py ${FILES})
-            echo EOF
-            } >> "$GITHUB_ENV"
+            $(python .github/workflows/scripts/updatefileinfo.py ${FILES}) 
+            ERRCODE >> "$GITHUB_ENV"
 
             echo $ERRCODE
 
