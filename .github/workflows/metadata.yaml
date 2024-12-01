@@ -39,10 +39,13 @@ jobs:
             echo "FILES=$FILES" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
-        run: python .github/workflows/scripts/updatefileinfo.py ${FILES}
+        run: |
+            ERRCODE=$(python .github/workflows/scripts/updatefileinfo.py ${FILES})
+            echo "ERRCODE=$ERRCODE" >> $GITHUB_ENV
+
 
       - name: Stage, Commit and Push 
-        if: steps.get-update.outcome == 'success'
+        if: env.ERRCODE == '0'
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

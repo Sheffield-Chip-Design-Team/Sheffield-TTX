@@ -75,8 +75,10 @@ if __name__ == "__main__":
             file.writelines(lines)
 
     else:
-        print("No verilog files updated.")
-        
-    print("Update Script Complete!")
+        print(filename + "does not exist.")
+        sys.exit(1)
+
+    print("Update Complete!")
+    sys.exit(0)
     
     # python3 updatefileinfo.py tt_um_enjimneering_top.v 
