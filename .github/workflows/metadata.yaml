@@ -34,7 +34,7 @@ jobs:
       - name: Get Updated Files
         id: get-update
         run: |
-            FILES=$(git diff HEAD HEAD~1 --name-only --oneline --pretty='')
+            FILES=$(git log --name-only --pretty=oneline HEAD HEAD~1)
             echo "Changed files: $FILES"
             echo "FILES=$FILES" >> $GITHUB_ENV
 
@@ -42,7 +42,7 @@ jobs:
         run: |
             python .github/workflows/scripts/updatefileinfo.py ${FILES}) 
         
-            
+
       - name: Stage, Commit and Push 
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
