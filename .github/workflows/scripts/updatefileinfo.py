@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     else:
         print(filename + "does not exist.")
-        sys.exit(1)
+        sys.exit(2)
 
     print("Update Complete!")
     sys.exit(0)
