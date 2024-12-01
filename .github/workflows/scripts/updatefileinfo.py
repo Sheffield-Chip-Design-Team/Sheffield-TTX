@@ -75,7 +75,7 @@ if __name__ == "__main__":
             file.writelines(lines)
 
     else:
-        print(filename + "does not exist.")
+        print("No verilog file updated")
         sys.exit(0)
 
     print("Update Complete!")
