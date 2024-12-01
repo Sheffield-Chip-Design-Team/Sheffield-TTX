@@ -19,7 +19,7 @@ def getFileName(cmd_args):
                 break
             else:
                 print(arg + " is not a valid verilog filename.")
-        argcount = argcount + !
+        argcount = argcount + 1
 
     return filename
 
