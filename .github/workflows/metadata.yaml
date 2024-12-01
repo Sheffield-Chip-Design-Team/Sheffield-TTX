@@ -40,13 +40,10 @@ jobs:
 
       - name: Execute Auto-Update Python Script
         run: |
-            ERRCODE=$(python .github/workflows/scripts/updatefileinfo.py ${FILES}) 
-            echo "ERRCODE=$ERRCODE" >> "$GITHUB_ENV"
-            echo "Script Exit Code: $ERRCODE"
-
-
+            python .github/workflows/scripts/updatefileinfo.py ${FILES}) 
+        
+            
       - name: Stage, Commit and Push 
-        if: env.ERRCODE == '0'
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
