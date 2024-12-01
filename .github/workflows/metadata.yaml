@@ -41,6 +41,7 @@ jobs:
       - name: Execute Auto-Update Python Script
         run: |
             ERRCODE=$(python .github/workflows/scripts/updatefileinfo.py ${FILES})
+            echo $ERRCODE
             echo "ERRCODE=$ERRCODE" >> $GITHUB_ENV
 
 
