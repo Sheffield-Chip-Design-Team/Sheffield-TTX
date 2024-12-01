@@ -35,7 +35,7 @@ jobs:
         id: get-update
         run: |
             FILES=$(git diff HEAD HEAD~1 --name-only --pretty='')
-            echo "Changed files: $FILES"
+            echo "Changed files: $FILES>>\n"
             echo "FILES=$FILES" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
