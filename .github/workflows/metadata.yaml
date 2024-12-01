@@ -41,11 +41,11 @@ jobs:
       - name: Execute Auto-Update Python Script
         run: |
             {
-            echo 'ERRCODE<<EOF'
+            echo 'ERRCODE<<\n'
             $(python .github/workflows/scripts/updatefileinfo.py ${FILES})
             echo EOF
             } >> "$GITHUB_ENV"
-             
+
             echo $ERRCODE
 
 
