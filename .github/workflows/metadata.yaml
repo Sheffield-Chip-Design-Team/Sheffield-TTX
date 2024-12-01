@@ -34,7 +34,7 @@ jobs:
       - name: Get Updated Files
         id: get-update
         run: |
-            FILES=$(git log --name-only --pretty=oneline HEAD HEAD~1)
+            FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
             echo "Changed files: $FILES"
             echo "FILES=$FILES" >> $GITHUB_ENV
 
