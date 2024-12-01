@@ -16,7 +16,7 @@ def getFileName(cmd_args):
             filename = arg
             break
         else:
-            print(arg + "is not a valid verilog filename.")
+            print(arg + " is not a valid verilog filename.")
 
     return filename
 
@@ -72,7 +72,8 @@ if __name__ == "__main__":
             file.writelines(lines)
 
     else:
-        print(filename + "does not exist.")
-    print("Update Complete!")
+        print("No verilog files updated.")
+        
+    print("Update Script Complete!")
     
     # python3 updatefileinfo.py tt_um_enjimneering_top.v 
