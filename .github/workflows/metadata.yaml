@@ -38,7 +38,7 @@ jobs:
             echo "FILES=$FILES" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
-        run: python .github/workflows/scripts/updatefileinfo.py $FILES
+        run: python .github/workflows/scripts/updatefileinfo.py ${FILES}
 
       - name: Stage, Commit and Push 
         env:
