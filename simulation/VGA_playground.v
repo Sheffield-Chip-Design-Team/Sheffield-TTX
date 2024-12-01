@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
  * Abdulatif Babli, K Arjunav, Cameron Brizland
- * Last Updated: 30/11/2024 @ 21:46:41
+ * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2024-11-30 22:53:27.732770 
+// BUILD TIME: 2024-12-01 21:30:09.016217 
 
 // TT Pinout (standard for TT projects - can't change this)
-
+// Merry Christmas!
 
 module tt_um_vga_example ( 
 
@@ -300,6 +300,13 @@ endmodule
 //================================================
 
 // Module: Player Logic
+
+/*
+   Author: Anubhav Avinaash, James Ashie Kotey, Bowen Shi
+   Description:    
+         Player Logic FSM
+   Last Updated:
+*/
 
 module PlayerLogic(
     input clk,
