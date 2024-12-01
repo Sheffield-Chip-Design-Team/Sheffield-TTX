@@ -15,6 +15,8 @@ def getFileName(cmd_args):
             print(f"INFO: adding {arg} to update queue.")
             filename = arg
             break
+        else:
+            print(arg + "is not a valid verilog filename.")
 
     return filename
 
