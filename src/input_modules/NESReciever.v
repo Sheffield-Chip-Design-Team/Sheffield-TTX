@@ -2,25 +2,25 @@
     Project: TinyTapeStation
     Module: FPGA NES Reciever Module
     Original Author :
-    Adapted by Kwashie Andoh 
+    Adapted by Kwashie Andoh
 
     Summary: The NES input receiever module takes input from the NES 7-pin output port and
     and inputs the individual button states.
-   
+
     Description =============================================
 
 */
 
 module NESTest_Top (
-    
-    // system 
+
+    // system
     input wire system_clk_100MHz, // E3 - CLK pin
     input wire reset,             // Switch
 
     // controller interface [GPIO]
     input wire NES_Data,
     output wire NES_Latch,
-    output wire NES_Clk, 
+    output wire NES_Clk,
 
     // button states [LEDs]
     output wire A_out,
@@ -31,19 +31,19 @@ module NESTest_Top (
     output wire down_out,
     output wire left_out,
     output wire right_out
-    
+
 );
 
     wire system_clk_50MHz;
-    
+
     // 100MHz -> 50MHz Clock Divider
     clk_div clk_div_100to50
-    ( 
-        .clk_in(system_clk_100MHz),  
-        .reset(reset), 
-        .clk_50MHz(system_clk_50MHz)  
+    (
+        .clk_in(system_clk_100MHz),
+        .reset(reset),
+        .clk_50MHz(system_clk_50MHz)
     );
-    
+
     NES_Reciever nesRec (
         .clk(system_clk_50MHz),
         .reset(reset),
@@ -99,7 +99,7 @@ module NES_Reciever (
     reg A_reg, B_reg, select_reg, start_reg, up_reg, down_reg, left_reg, right_reg;
     reg A_next, B_next, select_next, start_next, up_next, down_next, left_next, right_next;
     reg latch_next, nes_clk_next;
-    
+
      // infer all the registers
     always @(posedge clk)
     if (reset) begin
@@ -132,7 +132,7 @@ module NES_Reciever (
 
     // FSM next-state logic and data path
     always @(posedge clk) begin
-        
+
         // defaults
         count_next  <= count_reg;
         A_next      <= A_reg;
@@ -144,38 +144,38 @@ module NES_Reciever (
         left_next   <= left_reg;
         right_next  <= right_reg;
         state_next  <= state_reg;
-        
+
         case (state_reg)
 
             latch_en: begin
-            // assert latch pin
-            latch = 1;
+                // assert latch pin
+                latch_next = 1;
 
-            nes_clk <= 0;  // nes_clk state
+                nes_clk_next = 0;  // nes_clk state
 
-            // count 12 us
-            if (count_reg < 600) count_next = count_reg + 1;
+                // count 12 us
+                if (count_reg < 600) count_next = count_reg + 1;
 
-            // once 12 us passed
-            else if (count_reg == 600) begin
-                latch = 0;  // deassert latch pin
+                // once 12 us passed
+                else if (count_reg == 600) begin
+                latch_next = 0;  // deassert latch pin
                 count_next = 0;  // reset latch_count
                 state_next = read_A_wait;  // go to read_A_wait state
-            end
+                end
             end
 
             read_A_wait: begin
                 if (count_reg == 0) A_next = data;  // read A
 
-                nes_clk = 0;  // nes_clk state
+                nes_clk_next = 0;  // nes_clk state
 
                 if (count_reg < 300)  // count clk cycles for 6 us
-                    count_next = count_reg + 1;
+                count_next = count_reg + 1;
 
                 // once 6 us passed
                 else if (count_reg == 300) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_B;  // go to read_B state
+                count_next = 0;  // reset latch_count
+                state_next = read_B;  // go to read_B state
                 end
             end
 
@@ -184,16 +184,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read B
                 if (count_reg == 300) B_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_select;  // go to read_select state
+                count_next = 0;  // reset latch_count
+                state_next = read_select;  // go to read_select state
                 end
             end
 
@@ -202,16 +202,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read select
                 if (count_reg == 300) select_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_start;  // go to read_start state
+                count_next = 0;  // reset latch_count
+                state_next = read_start;  // go to read_start state
                 end
             end
 
@@ -220,16 +220,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read start
                 if (count_reg == 300) start_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_up;  // go to read_up state
+                count_next = 0;  // reset latch_count
+                state_next = read_up;  // go to read_up state
                 end
             end
 
@@ -238,16 +238,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read up
                 if (count_reg == 300) up_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_down;  // go to read_down state
+                count_next = 0;  // reset latch_count
+                state_next = read_down;  // go to read_down state
                 end
             end
 
@@ -256,16 +256,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read down
                 if (count_reg == 300) down_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_left;  // go to read_left state
+                count_next = 0;  // reset latch_count
+                state_next = read_left;  // go to read_left state
                 end
             end
 
@@ -274,16 +274,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read left
                 if (count_reg == 300) left_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = read_right;  // go to read_right state
+                count_next = 0;  // reset latch_count
+                state_next = read_right;  // go to read_right state
                 end
             end
 
@@ -292,16 +292,16 @@ module NES_Reciever (
                 if (count_reg < 600) count_next = count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 300) nes_clk = 1;
-                else if (count_reg > 300) nes_clk = 0;
+                if (count_reg <= 300) nes_clk_next = 1;
+                else if (count_reg > 300) nes_clk_next = 0;
 
                 // read right
                 if (count_reg == 300) right_next = data;
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
-                    state_next = latch_en;  // go to latch_en state
+                count_next = 0;  // reset latch_count
+                state_next = latch_en;  // go to latch_en state
                 end
             end
 
