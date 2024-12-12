@@ -1,7 +1,7 @@
 /*
     Project: TinyTapeStation
     Module: FPGA NES Reciever Module
-    Original Author :
+    Original Author : Ludvig Strigeus
     Adapted by Kwashie Andoh
     Last Updated: 
     Summary: The NES input receiever module takes input from the NES 7-pin output port and
