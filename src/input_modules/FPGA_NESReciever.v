@@ -1,9 +1,9 @@
 /*
     Project: TinyTapeStation
     Module: FPGA NES Reciever Module
-    Original Author : Ludvig Strigeus
+    Original Author :
     Adapted by Kwashie Andoh
-    Last Updated: 
+
     Summary: The NES input receiever module takes input from the NES 7-pin output port and
     and inputs the individual button states.
 
@@ -238,7 +238,7 @@ module NES_Reciever (
             read_start: begin
                 // count clk cycles for 12 us
                 if (count_reg < 600) 
-                count_next = count_reg + 1;
+                count_next <= count_reg + 1;
 
                 // nes_clk state
                 if (count_reg <= 300) 
@@ -274,7 +274,7 @@ module NES_Reciever (
 
                 // state over
                 if (count_reg == 600) begin
-                    count_next = 0;  // reset latch_count
+                    count_next <= 0;  // reset latch_count
                     state_next <= read_down;  // go to read_down state
                 end
             end
@@ -282,7 +282,7 @@ module NES_Reciever (
             read_down: begin
                 // count clk cycles for 12 us
                 if (count_reg < 600) 
-                    count_next = count_reg + 1;
+                    count_next <= count_reg + 1;
 
                 // nes_clk state
                 if (count_reg <= 300) begin
