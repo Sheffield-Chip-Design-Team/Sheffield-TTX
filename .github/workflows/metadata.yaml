@@ -36,7 +36,7 @@ jobs:
         run: |
           FILES=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ' ')
           echo "Changed files: $FILES"
-          echo "FILES=\"$FILES\"" >> $GITHUB_ENV
+          echo "FILES=\$FILES\" >> $GITHUB_ENV
 
       - name: Execute Auto-Update Python Script
         run: |
