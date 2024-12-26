@@ -8,7 +8,6 @@
 */
 
 // === BUILD DEPENDENCIES === 
-// `include "GamepadEmulator.v"
 // `include "NESReciever.v"
 // `include "ControlInterface.v"
 // `include "PlayerLogic.v"
@@ -18,7 +17,6 @@
 // `include "PPU.v"
 
 // TT Pinout (standard for TT projects - can't change this)
-// Merry Christmas!
 
 module tt_um_Enjimneering_top ( 
 
@@ -32,22 +30,9 @@ module tt_um_Enjimneering_top (
     input  wire       rst_n    // reset_n - low to reset   
 );
     
-    // display signals
-    wire hsync;
-    wire vsync;
-    reg [1:0] R;
-    reg [1:0] G;
-    reg [1:0] B;
-    wire video_active;
-    wire [9:0] pix_x;
-    wire [9:0] pix_y;
-
-    // timing signals
-    wire pixel_value;
-    wire frame_end;
-
+ 
     // input signals
-    wire [4:0] input_data; // register to hold the 5 possible player actions
+    wire [9:0] input_data; // register to hold the 5 possible player actions
 
     InputController ic(  // change these mappings to change the controls in the simulastor
         .clk(clk),
@@ -87,6 +72,42 @@ module tt_um_Enjimneering_top (
         .sword_orientation(sword_orientation)
     );
 
+    //dragon logic 
+    wire [1:0] dragon_direction;
+    wire [7:0] dragon_position;
+    wire [5:0] movement_delay_counter;
+    
+    DragonHead dragonHead( 
+        .clk(clk),
+        .reset(~rst_n),
+        .player_pos(player_pos),
+    
+        .vsync(vsync),
+
+        .dragon_direction(dragon_direction),
+        .dragon_pos(dragon_position),
+        .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
+    );
+
+    DragonBody dragonBody(
+        .clk(clk),
+        .reset(~rst_n),
+        .States(2'b01),
+        .OrienAndPositon({dragon_direction,dragon_position}),
+        .movement_counter(movement_delay_counter),
+        .vsync(vsync),
+
+        .Dragon_1(Dragon_1),
+        .Dragon_2(Dragon_2),
+        .Dragon_3(Dragon_3),
+        .Dragon_4(Dragon_4),
+        .Dragon_5(Dragon_5),
+        .Dragon_6(Dragon_6),
+        .Dragon_7(Dragon_7),
+
+        .Display_en(Display_en)
+    );
+
     // Frame Control Unit
     wire [9:0]   Dragon_1 ;
     wire [9:0]   Dragon_2 ;
@@ -123,6 +144,16 @@ module tt_um_Enjimneering_top (
         .colour                  (pixel_value)
     );
 
+   // display sync signals
+    wire hsync;
+    wire vsync;
+    wire video_active;
+    wire [9:0] pix_x;
+    wire [9:0] pix_y;
+
+    // timing signals
+    wire frame_end;
+
     // vga unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -135,43 +166,11 @@ module tt_um_Enjimneering_top (
         .frame_end(frame_end)
     );
 
-
-    //dragon logic 
-    wire [1:0] dragon_direction;
-    wire [7:0] dragon_position;
-    wire [5:0] movement_delay_counter;
-
-    DragonHead dragonHead( 
-        .clk(clk),
-        .reset(~rst_n),
-        .player_pos(player_pos),
-    
-        .vsync(vsync),
-
-        .dragon_direction(dragon_direction),
-        .dragon_pos(dragon_position),
-        .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
-    );
-
-
-    DragonBody dragonBody(
-        .clk(clk),
-        .reset(~rst_n),
-        .States(2'b01),
-        .OrienAndPositon({dragon_direction,dragon_position}),
-        .movement_counter(movement_delay_counter),
-        .vsync(vsync),
-
-        .Dragon_1(Dragon_1),
-        .Dragon_2(Dragon_2),
-        .Dragon_3(Dragon_3),
-        .Dragon_4(Dragon_4),
-        .Dragon_5(Dragon_5),
-        .Dragon_6(Dragon_6),
-        .Dragon_7(Dragon_7),
-
-        .Display_en(Display_en)
-    );
+    // outpout colour signals
+    wire pixel_value;
+    reg [1:0] R;
+    reg [1:0] G;
+    reg [1:0] B;
 
     // display logic
     always @(posedge clk) begin
@@ -180,47 +179,39 @@ module tt_um_Enjimneering_top (
         R <= 0;
         G <= 0;
         B <= 0;
+        
         end else begin
+            if (video_active) begin // display output color from Frame controller unit
 
-        if (video_active) begin // display output color from Frame controller unit
+                if (player_direction == 0) begin // up
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 0;
+                end
 
-            if (player_direction == 0) begin // up
+                if (player_direction == 1) begin // right
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 2'b11;
+                    B <= pixel_value ? 2'b11 : 0;
+                end
 
-                R <= pixel_value ? 2'b11 : 2'b11;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 0;
+                if (player_direction == 2) begin // down
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 2'b11;
+                end
 
+                if (player_direction == 3) begin // left
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 2'b11;
+                end
+
+            end else begin
+                R <= 0;
+                G <= 0;
+                B <= 0;
             end
-
-            if (player_direction == 1) begin // right
-
-                R <= pixel_value ? 2'b11 : 0;
-                G <= pixel_value ? 2'b11 : 2'b11;
-                B <= pixel_value ? 2'b11 : 0;
-
-            end
-
-            if (player_direction == 2) begin // down
-
-                R <= pixel_value ? 2'b11 : 0;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 2'b11;
-
-            end
-
-            if (player_direction == 3) begin // left
-
-                R <= pixel_value ? 2'b11 : 2'b11;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 2'b11;
-
-            end
-
-        end else begin
-            R <= 0;
-            G <= 0;
-            B <= 0;
-        end
         end
     end
 
