@@ -7,10 +7,9 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2024-12-01 21:30:09.016217 
+// BUILD TIME: 2024-12-26 23:37:39.704257 
 
 // TT Pinout (standard for TT projects - can't change this)
-// Merry Christmas!
 
 module tt_um_vga_example ( 
 
@@ -24,22 +23,9 @@ module tt_um_vga_example (
     input  wire       rst_n    // reset_n - low to reset   
 );
     
-    // display signals
-    wire hsync;
-    wire vsync;
-    reg [1:0] R;
-    reg [1:0] G;
-    reg [1:0] B;
-    wire video_active;
-    wire [9:0] pix_x;
-    wire [9:0] pix_y;
-
-    // timing signals
-    wire pixel_value;
-    wire frame_end;
-
+ 
     // input signals
-    wire [4:0] input_data; // register to hold the 5 possible player actions
+    wire [9:0] input_data; // register to hold the 5 possible player actions
 
     InputController ic(  // change these mappings to change the controls in the simulastor
         .clk(clk),
@@ -79,6 +65,42 @@ module tt_um_vga_example (
         .sword_orientation(sword_orientation)
     );
 
+    //dragon logic 
+    wire [1:0] dragon_direction;
+    wire [7:0] dragon_position;
+    wire [5:0] movement_delay_counter;
+    
+    DragonHead dragonHead( 
+        .clk(clk),
+        .reset(~rst_n),
+        .player_pos(player_pos),
+    
+        .vsync(vsync),
+
+        .dragon_direction(dragon_direction),
+        .dragon_pos(dragon_position),
+        .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
+    );
+
+    DragonBody dragonBody(
+        .clk(clk),
+        .reset(~rst_n),
+        .States(2'b01),
+        .OrienAndPositon({dragon_direction,dragon_position}),
+        .movement_counter(movement_delay_counter),
+        .vsync(vsync),
+
+        .Dragon_1(Dragon_1),
+        .Dragon_2(Dragon_2),
+        .Dragon_3(Dragon_3),
+        .Dragon_4(Dragon_4),
+        .Dragon_5(Dragon_5),
+        .Dragon_6(Dragon_6),
+        .Dragon_7(Dragon_7),
+
+        .Display_en(Display_en)
+    );
+
     // Frame Control Unit
     wire [9:0]   Dragon_1 ;
     wire [9:0]   Dragon_2 ;
@@ -115,6 +137,16 @@ module tt_um_vga_example (
         .colour                  (pixel_value)
     );
 
+   // display sync signals
+    wire hsync;
+    wire vsync;
+    wire video_active;
+    wire [9:0] pix_x;
+    wire [9:0] pix_y;
+
+    // timing signals
+    wire frame_end;
+
     // vga unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -127,43 +159,11 @@ module tt_um_vga_example (
         .frame_end(frame_end)
     );
 
-
-    //dragon logic 
-    wire [1:0] dragon_direction;
-    wire [7:0] dragon_position;
-    wire [5:0] movement_delay_counter;
-
-    DragonHead dragonHead( 
-        .clk(clk),
-        .reset(~rst_n),
-        .player_pos(player_pos),
-    
-        .vsync(vsync),
-
-        .dragon_direction(dragon_direction),
-        .dragon_pos(dragon_position),
-        .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
-    );
-
-
-    DragonBody dragonBody(
-        .clk(clk),
-        .reset(~rst_n),
-        .States(2'b01),
-        .OrienAndPositon({dragon_direction,dragon_position}),
-        .movement_counter(movement_delay_counter),
-        .vsync(vsync),
-
-        .Dragon_1(Dragon_1),
-        .Dragon_2(Dragon_2),
-        .Dragon_3(Dragon_3),
-        .Dragon_4(Dragon_4),
-        .Dragon_5(Dragon_5),
-        .Dragon_6(Dragon_6),
-        .Dragon_7(Dragon_7),
-
-        .Display_en(Display_en)
-    );
+    // outpout colour signals
+    wire pixel_value;
+    reg [1:0] R;
+    reg [1:0] G;
+    reg [1:0] B;
 
     // display logic
     always @(posedge clk) begin
@@ -172,47 +172,39 @@ module tt_um_vga_example (
         R <= 0;
         G <= 0;
         B <= 0;
+        
         end else begin
+            if (video_active) begin // display output color from Frame controller unit
 
-        if (video_active) begin // display output color from Frame controller unit
+                if (player_direction == 0) begin // up
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 0;
+                end
 
-            if (player_direction == 0) begin // up
+                if (player_direction == 1) begin // right
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 2'b11;
+                    B <= pixel_value ? 2'b11 : 0;
+                end
 
-                R <= pixel_value ? 2'b11 : 2'b11;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 0;
+                if (player_direction == 2) begin // down
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 2'b11;
+                end
 
+                if (player_direction == 3) begin // left
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
+                    B <= pixel_value ? 2'b11 : 2'b11;
+                end
+
+            end else begin
+                R <= 0;
+                G <= 0;
+                B <= 0;
             end
-
-            if (player_direction == 1) begin // right
-
-                R <= pixel_value ? 2'b11 : 0;
-                G <= pixel_value ? 2'b11 : 2'b11;
-                B <= pixel_value ? 2'b11 : 0;
-
-            end
-
-            if (player_direction == 2) begin // down
-
-                R <= pixel_value ? 2'b11 : 0;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 2'b11;
-
-            end
-
-            if (player_direction == 3) begin // left
-
-                R <= pixel_value ? 2'b11 : 2'b11;
-                G <= pixel_value ? 2'b11 : 0;
-                B <= pixel_value ? 2'b11 : 2'b11;
-
-            end
-
-        end else begin
-            R <= 0;
-            G <= 0;
-            B <= 0;
-        end
         end
     end
 
@@ -300,63 +292,69 @@ endmodule
 //================================================
 
 // Module: Player Logic
-
 /*
-   Author: Anubhav Avinaash, James Ashie Kotey, Bowen Shi
+   Authors: Anubhav Avinaash,
+   James Ashie Kotey, Bowen Shi.
+
    Description:    
-         Player Logic FSM
+        
+        Player Logic FSM - movement and attack control. Collisions, 
+        lives and respawns managed centrally in the Game State Controller.
+
    Last Updated:
+
 */
 
-module PlayerLogic(
-    input clk,
-    input reset,
-    input wire [4:0] input_data,
-    input wire frame_end,
+module PlayerLogic (
+
+    input            clk,
+    input            reset,
+    input wire       frame_end,
+    input wire [9:0] input_data,
 
     output reg [7:0] player_pos,
-    output reg [1:0] player_orientation,   // player orientation 
+    output reg [1:0] player_orientation, // player orientation 
     output reg [1:0] player_direction,   // player direction
     output reg [3:0] player_sprite,
 
-    output reg [7:0] sword_position, // sword position xxxx_yyyy
+    output reg [7:0] sword_position,     // sword position xxxx_yyyy
     output reg [3:0] sword_visible,
-    output reg [1:0] sword_orientation   // sword orientation 
-    
+    output reg [1:0] sword_orientation   // sword orientation   
 );
 
     // State definitions
     localparam IDLE_STATE   = 2'b00;  // Move when there is input from the controller
     localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
     localparam MOVE_STATE   = 2'b10;  // Wait for input and stay idle
+    localparam ATTACK_DURATION = 3'b101
 
     reg [5:0] player_anim_counter;
-    reg [5:0] sword_duration; // how long the sword stays visible
+    reg [5:0] sword_duration; // how long the sword stays visible - (SET BY ATTACK DURATION)
 
     // player state register
     reg [1:0] current_state;
     reg [1:0] next_state;
 
+    // sword direction logic register
+    reg [1:0] last_direction;
 
     reg sword_duration_flag;
     reg sword_duration_flag_local;
 
-
-    always @(negedge clk) begin //<<<<<IMPORTANT<<<<<< negedge is aviable in vga playground and FPGA. Probably some timing issue but not sure
-        if(~reset)begin           
-
-            if(frame_end)begin
-                    // Update state
-                current_state <= next_state;
-
-                sword_duration_flag_local <= sword_duration_flag; 
-                if(sword_duration_flag != sword_duration_flag_local)begin
-                    sword_duration<=0;
+    always @(negedge clk) begin  // animation FSM
+    // <<<<<IMPORTANT<<<<<< negedge is available in vga playground and FPGA. Probably some timing issue but not sure
+    // but why is it negedge anyway tho ???
+        if (~reset) begin           
+            if (frame_end) begin  
+                current_state <= next_state; // Update state
+                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
+                
+                if (sword_duration_flag != sword_duration_flag_local) begin
+                    sword_duration <= 0;
                 end else begin
                     sword_duration <= sword_duration + 1;
                 end
 
-                // player_anim_counter <= player_anim_counter + 1;
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
                     player_sprite <= 4'b0011;
@@ -367,59 +365,59 @@ module PlayerLogic(
                     player_anim_counter <= player_anim_counter +1;  
                 end
             end
-        end else begin
+
+        end else begin // reset attack
             current_state <= 0;
             sword_duration <= 0;
             player_anim_counter <= 0;
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk) begin // Player State FSM
         if(~reset)begin
             case (current_state)
-
+                
                 IDLE_STATE: begin
+                    
                     sword_position <= 0;
                     sword_visible <= 4'b1111;
 
-                    case (input_data[4]) 
+                    case (input_data[9]) 
                         1 : begin // attack
                             next_state <= ATTACK_STATE;
                             sword_duration_flag <= sword_duration_flag + 1;
                         end
 
                         0: begin // no attack
-
-                        if (input_data[3:0] != 0 ) // directional buttons
-                            next_state <= MOVE_STATE;  // Default case, stay in IDLE state
+                            if (input_data[8:5] != 0 ) // directional buttons
+                                next_state <= MOVE_STATE;  // Default case, stay in IDLE state
                         end
 
                         default: begin
                             next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                         end
-
                     endcase               
                 end
 
                 MOVE_STATE: begin
                     // Move player based on direction inputs and update orientation
-                    if (input_data[0] == 1 && player_pos[3:0] > 4'b0001) begin   // Check boundary for up movement
+                    if (input_data[5] == 1 && player_pos[3:0] > 4'b0001) begin   // Check boundary for up movement
                         player_pos <= player_pos - 1;  // Move up
                         player_direction <= 2'b00;
                     end
 
-                    if (input_data[1] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
+                    if (input_data[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
                         player_pos <= player_pos + 1;  // Move down
                         player_direction <= 2'b10;
                     end 
 
-                    if (input_data[2] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
+                    if (input_data[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
                         player_pos <= player_pos - 16;  // Move left
                         player_orientation <= 2'b11;
                         player_direction <= 2'b11;
                     end
 
-                    if (input_data[3] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
+                    if (input_data[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
                         player_pos <= player_pos + 16;  // Move right
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
@@ -427,33 +425,68 @@ module PlayerLogic(
 
                     next_state <= IDLE_STATE;  // Return to IDLE after moving
                     // player_anim_counter <= 0;
+
                 end
 
                 ATTACK_STATE: begin
-                    sword_visible <= 4'b0001;
-                    if (player_direction == 2'b00 ) begin // player facing up
-                        sword_position <= player_pos - 1;
-                        sword_orientation <= 2'b00;
-                    end if (player_direction == 2'b10 ) begin // player facing down
-                        sword_position <= player_pos + 1;
-                        sword_orientation <= 2'b10;
-                    end if (player_direction == 2'b11) begin // player facing left
-                        sword_position <= player_pos - 16;
-                        sword_orientation <= 2'b11;
-                    end if (player_direction == 2'b01) begin // player facing right
-                        sword_position <= player_pos + 16;
-                        sword_orientation <= 2'b01;
+                    last_direction <= player_direction;
+
+                    // Check if the sword direction is specified by the player - why does it need to set both?
+                    if (input_data[5] == 1) begin   
+                        last_direction <= 2'b00;
+                        player_direction <= 2'b00;
                     end
 
-                    if (sword_duration == 10)
+                    if (input_data[6] == 1) begin  
+                        last_direction <= 2'b10;
+                        player_direction <= 2'b10;
+                    end 
+
+                    if (input_data[7] == 1) begin
+                        last_direction <= 2'b11;
+                        player_direction <= 2'b11;
+                    end
+
+                    if (input_data[8] == 1) begin
+                        last_direction <= 2'b01;
+                        player_direction <= 2'b01;
+                    end
+
+                    if (input_data[4] == 1) begin                    
+                        // Set sword orientation
+                        sword_orientation <= last_direction;
+
+                        // Set sword location
+                        if (last_direction == 2'b00 ) begin // player facing up
+                            sword_position <= player_pos - 1;
+                        end 
+
+                        if (last_direction == 2'b10 ) begin // player facing down
+                            sword_position <= player_pos + 1;
+                        end 
+
+                        if (last_direction == 2'b11) begin // player facing left
+                            sword_position <= player_pos - 16;
+                        end 
+
+                        if (last_direction == 2'b01) begin // player facing right
+                            sword_position <= player_pos + 16;
+                        end
+
+                        // Make sword visible
+                        sword_visible <= 4'b0001;
+                    end 
+
+                    if (sword_duration == ATTACK_DURATION) // Attack State duration
                         next_state <= IDLE_STATE;  // Return to IDLE after attacking
-                        // player_anim_counter <= 0;
                 end
 
                 default: begin
                     next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                 end
+
             endcase
+        
         end else begin
         sword_duration_flag <= 0;
         next_state <= 0;
@@ -462,8 +495,7 @@ module PlayerLogic(
         end
     end
 
-    endmodule
-
+endmodule
 //================================================
 
 // Module : Dragon Head
