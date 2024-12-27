@@ -1,14 +1,12 @@
 
 // Module: Player Logic
-// Last Updated: 27/12/2024 @ 00:06:34
 
 /*
-   Authors: 
-        Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
-
+   Last Updated: 27/12/2024 @ 00:06:34
+   Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
    Description:    
-        Player Logic FSM - movement and attack control. Collisions, 
-        lives and respawns managed centrally in the Game State Controller.
+        Player Logic FSM - movement and attack control. 
+        Collisions, lives and respawns managed centrally in the Game State Controller.
 */
 
 module PlayerLogic (
@@ -190,14 +188,13 @@ module PlayerLogic (
                 default: begin
                     next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                 end
-
             endcase
         
         end else begin
-        sword_duration_flag <= 0;
-        next_state <= 0;
-        player_orientation <= 2'b01;
-        player_direction <= 2'b01;
+            sword_duration_flag <= 0;
+            next_state <= 0;
+            player_orientation <= 2'b01;
+            player_direction <= 2'b01;
         end
     end
 

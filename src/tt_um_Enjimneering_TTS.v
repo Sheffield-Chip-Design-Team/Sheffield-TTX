@@ -17,6 +17,7 @@
 // `include "PPU.v"
 
 // TT Pinout (standard for TT projects - can't change this)
+
 // Happy New Year!
 
 module tt_um_Enjimneering_top ( 
@@ -30,7 +31,6 @@ module tt_um_Enjimneering_top (
     input  wire       clk,      // clock
     input  wire       rst_n    // reset_n - low to reset   
 );
-    
  
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
