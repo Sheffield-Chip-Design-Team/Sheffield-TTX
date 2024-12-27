@@ -1,10 +1,11 @@
 
 // Module: Player Logic
 // Last Updated:
+
 /*
    Authors: 
         Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
-        
+
    Description:    
         Player Logic FSM - movement and attack control. Collisions, 
         lives and respawns managed centrally in the Game State Controller.
