@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = tt_um_Enjimneering_full_adder.v full_adder.v
+PROJECT_SOURCES = tt_um_Enjimneering_TTS.v ControlInterface.v PlayerLogic.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v 
 
 ifneq ($(GATES),yes)
 
