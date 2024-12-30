@@ -326,7 +326,7 @@ module PlayerLogic (
     localparam IDLE_STATE   = 2'b00;  // Move when there is input from the controller
     localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
     localparam MOVE_STATE   = 2'b10;  // Wait for input and stay idle
-    localparam ATTACK_DURATION = 3'b101
+    localparam ATTACK_DURATION = 3'b101;
 
     reg [5:0] player_anim_counter;
     reg [5:0] sword_duration; // how long the sword stays visible - (SET BY ATTACK DURATION)
