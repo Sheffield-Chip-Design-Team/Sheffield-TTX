@@ -239,7 +239,6 @@ module tt_um_Enjimneering_top (
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign ui_in[7:5] = 0;
     assign uio_out[7:2] = 0;
     wire _unused_ok = &{ena, uio_in}; 
 
