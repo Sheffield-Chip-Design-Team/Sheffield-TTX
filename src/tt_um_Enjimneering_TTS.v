@@ -35,7 +35,16 @@ module tt_um_Enjimneering_top (
     //system signals
     wire NES_Clk;
     wire NES_Latch;
- 
+    wire NES_Data;
+
+    /*
+        NES RECIEVER MODULE
+
+
+
+
+    */
+
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
 
@@ -168,7 +177,8 @@ module tt_um_Enjimneering_top (
         .display_on(video_active),
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
-        .frame_end(frame_end)
+        .frame_end(frame_end),
+        .input_enable()
     );
 
     // outpout colour signals
@@ -222,13 +232,13 @@ module tt_um_Enjimneering_top (
 
  
     // System IO Connections
-    assign  NES_Data = ui_in[0];
+    assign NES_Data = ui_in[0];
     assign uio_oe  = 8'b0000_0011;
-    assign  uio_out[1:0] = {NES_Latch, NES_Clk};
+    assign uio_out[1:0] = {NES_Latch, NES_Clk};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in}; 
+    wire _unused_ok = &{ena, uio_in[7:2]}; 
 
 endmodule
