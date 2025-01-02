@@ -9,11 +9,11 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-It doesnt.
+Zelda x SNAKE inspired video game. Playable using a VGA monitor and NES controller.
 
 ## How to test
 
-You can't.
+Grab a NES controller and play!
 
 ## External hardware
 
