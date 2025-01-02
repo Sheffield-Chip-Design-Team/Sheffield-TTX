@@ -1,7 +1,7 @@
 # Tiny Tapeout project information
 project:
   title:        "The Tiny Tapestation"      # Project title
-  author:       "James Ashie Kotey"      # Your name
+  author:       "SHARC"      # Your name
   discord:      "captainmcnugget_"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "The Tiny Tapestation"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
