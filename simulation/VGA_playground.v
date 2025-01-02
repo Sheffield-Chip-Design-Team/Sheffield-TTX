@@ -8,7 +8,7 @@
 */
 
 // BUILD TIME: 2024-12-26 23:37:39.704257 
-
+// https://vga-playground.com/
 // TT Pinout (standard for TT projects - can't change this)
 
 module tt_um_vga_example ( 
