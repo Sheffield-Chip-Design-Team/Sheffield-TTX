@@ -216,11 +216,12 @@ module tt_um_Enjimneering_top (
         end
     end
 
+    // assign uio enable path before submitting
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
 
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out = 0;
-    assign uio_oe  = 0;
+    assign uio_out[7:2] = 0;
+    assign uio_oe  = 8'b0000_00011;
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule

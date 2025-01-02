@@ -1,7 +1,9 @@
 
 // Module : Input Collector
-
+// Author: James Adhie Kotey
 /* 
+
+    Last Updated: 
     Description:
                 takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
 
@@ -11,6 +13,8 @@
                 2: LEFT
                 3: RIGHT
                 4: ACTION
+
+    
 */
 
 module InputController (
@@ -34,7 +38,6 @@ module InputController (
     reg [4:0] current_state   = 5'b0;
     reg [4:0] pressed_buttons = 5'b0 ;
     reg [4:0] released_buttons = 5'b0 ;
-    reg [1:0] ripple_counter = 0;
 
     always @(posedge clk) begin
         previous_state <= current_state;
