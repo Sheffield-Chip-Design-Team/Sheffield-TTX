@@ -8,10 +8,13 @@ You can also include images in this folder and reference them in the markdown. E
 -->
 
 ## How it works
-It doesn't at the moment...
+
+It doesnt.
 
 ## How to test
-However you wish, really.
+
+You can't.
 
 ## External hardware
-None
+
+VGA PMOD.
