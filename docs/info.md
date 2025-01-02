@@ -8,14 +8,10 @@ You can also include images in this folder and reference them in the markdown. E
 -->
 
 ## How it works
-
-NES input -> Game Logic ->  Graphics Controllers -> VGA output
+It doesn't at the moment...
 
 ## How to test
-
-Test the adder using the python test utility.
+However you wish, really.
 
 ## External hardware
-
-Literally nothing.
-
+None
