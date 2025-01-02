@@ -33,8 +33,8 @@ module tt_um_Enjimneering_top (
 );
 
     //system signals
-    wire NES_CLK;
-    wire NES_LATCH;
+    wire NES_Clk;
+    wire NES_Latch;
  
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
