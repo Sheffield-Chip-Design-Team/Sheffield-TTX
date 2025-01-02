@@ -31,6 +31,10 @@ module tt_um_Enjimneering_top (
     input  wire       clk,      // clock
     input  wire       rst_n    // reset_n - low to reset   
 );
+
+    //system signals
+    wire NES_CLK;
+    wire NES_LATCH;
  
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
@@ -216,12 +220,15 @@ module tt_um_Enjimneering_top (
         end
     end
 
-    // assign uio enable path before submitting
+ 
+    // System IO Connections
+    assign  NES_Data = ui_in[0];
+    assign uio_oe  = 8'b0000_0011;
+    assign  uio_out[1:0] = {NES_Latch, NES_Clk};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-
+    
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
-    assign uio_oe  = 8'b0000_00011;
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
