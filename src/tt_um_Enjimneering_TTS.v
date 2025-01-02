@@ -37,7 +37,7 @@ module tt_um_Enjimneering_top (
     wire NES_Latch;
     wire NES_Data;
 
-    assign {NES_Latch,NES_Clk} = 2'b0
+    assign {NES_Latch,NES_Clk} = 2'b0;
 
     /*
         NES RECIEVER MODULE
