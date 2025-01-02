@@ -37,6 +37,8 @@ module tt_um_Enjimneering_top (
     wire NES_Latch;
     wire NES_Data;
 
+    assign {NES_Latch,NES_Clk} = 2'b0
+
     /*
         NES RECIEVER MODULE
 
@@ -232,13 +234,13 @@ module tt_um_Enjimneering_top (
 
  
     // System IO Connections
-    assign NES_Data = ui_in[0];
     assign uio_oe  = 8'b0000_0011;
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
+    assign ui_in[7:5] = 0;
     assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in[7:2]}; 
+    wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
