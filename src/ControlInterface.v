@@ -3,7 +3,7 @@
 // Author: James Adhie Kotey
 /* 
 
-    Last Updated: 
+    Last Updated: 02/01/2025 @ 19:00:14
     Description:
                 takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
 
