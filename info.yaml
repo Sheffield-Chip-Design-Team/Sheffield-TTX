@@ -28,9 +28,9 @@ project:
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: "Input Bit A"
-  ui[1]: "Input Bit B"
-  ui[2]: "Carry in "
+  ui[0]: "NES_Data"
+  ui[1]: ""
+  ui[2]: ""
   ui[3]: ""
   ui[4]: ""
   ui[5]: ""
@@ -38,8 +38,8 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: "Sum Out"
-  uo[1]: "Carry out"
+  uo[0]: "VGA"
+  uo[1]: ""
   uo[2]: ""
   uo[3]: ""
   uo[4]: ""
@@ -48,8 +48,8 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
+  uio[0]: "NES Latch"
+  uio[1]: "NES CLK"
   uio[2]: ""
   uio[3]: ""
   uio[4]: ""
