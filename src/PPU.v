@@ -1,5 +1,5 @@
 // Module: Picture Processing Unit 
-// Last Updated: 02/01/2025 @ 17:33:05
+// Last Updated: 
 
 // `include SpriteROM.v
 
@@ -17,7 +17,7 @@
     Array Entity Format:
             [17:4] Same as before,
             [3:0] number of tiles.
-    
+//
 */
 
 /*      
@@ -26,7 +26,7 @@
 */
 
 module PictureProcessingUnit(
-    input clk_in,  
+    input clk_in
     input reset,    
     input wire [13:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
     input wire [13:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
