@@ -26,7 +26,7 @@
 */
 
 module PictureProcessingUnit(
-    input clk_in
+    input clk_in,
     input reset,    
     input wire [13:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
     input wire [13:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
