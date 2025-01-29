@@ -17,7 +17,7 @@
 // `include "PPU.v"
 
 // TT Pinout (standard for TT projects - can't change this)
-
+// GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 // Happy New Year!
 
 module tt_um_Enjimneering_top ( 
