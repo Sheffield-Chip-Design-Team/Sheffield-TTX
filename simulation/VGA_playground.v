@@ -81,6 +81,16 @@ module tt_um_vga_example (
         .dragon_pos(dragon_position),
         .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
     );
+    // Frame Control Unit
+    wire [9:0]   Dragon_1 ;
+    wire [9:0]   Dragon_2 ;
+    wire [9:0]   Dragon_3 ;
+    wire [9:0]   Dragon_4 ;
+    wire [9:0]   Dragon_5 ;
+    wire [9:0]   Dragon_6 ;
+    wire [9:0]   Dragon_7 ;
+
+    wire [6:0] Display_en;
 
     DragonBody dragonBody(
         .clk(clk),
@@ -101,16 +111,6 @@ module tt_um_vga_example (
         .Display_en(Display_en)
     );
 
-    // Frame Control Unit
-    wire [9:0]   Dragon_1 ;
-    wire [9:0]   Dragon_2 ;
-    wire [9:0]   Dragon_3 ;
-    wire [9:0]   Dragon_4 ;
-    wire [9:0]   Dragon_5 ;
-    wire [9:0]   Dragon_6 ;
-    wire [9:0]   Dragon_7 ;
-
-    wire [6:0] Display_en;
 
     PictureProcessingUnit ppu (
 
@@ -118,9 +118,9 @@ module tt_um_vga_example (
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b1111_11_0101_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .entity_4                (14'b1111_11_0110_0000),
-        .entity_5                (14'b1111_11_0110_0000),
+        .entity_3                (14'b0000_00_1111_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_4                (14'b0000_00_1110_0000),
+        .entity_5                (14'b0000_00_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
         .entity_7_Array          (18'b1111_01_1010_0000_0111),
         .entity_8_Flip           (14'b1111_11_1111_1111),
@@ -1183,14 +1183,14 @@ module SpriteROM (
 
     initial begin
 
-        romData[0] = 8'b11111111; // 0000 Heart 
-        romData[1] = 8'b10011001;
-        romData[2] = 8'b00000000;
-        romData[3] = 8'b00100000;
-        romData[4] = 8'b00010000;
-        romData[5] = 8'b10000001;
-        romData[6] = 8'b11000011;
-        romData[7] = 8'b11100111;
+        romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
+        romData[1] = 8'b1_111111_1;
+        romData[2] = 8'b1_101011_1;
+        romData[3] = 8'b1_000101_1;
+        romData[4] = 8'b1_000001_1;
+        romData[5] = 8'b1_100011_1;
+        romData[6] = 8'b1_110111_1;
+        romData[7] = 8'b1_111111_1;
 
         romData[8]  = 8'b11101111; // 0001 Sword 0001
         romData[9]  = 8'b11101111;
