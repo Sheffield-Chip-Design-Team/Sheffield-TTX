@@ -77,11 +77,11 @@ module SpriteROM (
 
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
         romData[1] = 8'b1_111111_1;
-        romData[2] = 8'b1_101101_1;
-        romData[3] = 8'b1_000000_1;
-        romData[4] = 8'b1_000100_1;
-        romData[5] = 8'b1_100001_1;
-        romData[6] = 8'b1_110011_1;
+        romData[2] = 8'b1_101011_1;
+        romData[3] = 8'b1_000101_1;
+        romData[4] = 8'b1_000001_1;
+        romData[5] = 8'b1_100011_1;
+        romData[6] = 8'b1_110111_1;
         romData[7] = 8'b1_111111_1;
 
         romData[8]  = 8'b11101111; // 0001 Sword 0001
