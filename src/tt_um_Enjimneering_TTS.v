@@ -133,7 +133,7 @@ module tt_um_Enjimneering_top (
     );
 
 
-
+    assign heart_1 
     // Frame Control Unit
 
     PictureProcessingUnit ppu (
@@ -142,7 +142,7 @@ module tt_um_Enjimneering_top (
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b0000_11_1111_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_3                (14'b0000_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
         .entity_4                (14'b0000_11_1110_0000),
         .entity_5                (14'b0000_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
@@ -246,18 +246,5 @@ module tt_um_Enjimneering_top (
 endmodule
 
 
-// Game control 
-
-module GameStateControlUnit (
-    input wire playerLives,
-    input wire Heart1,
-    output wire Heart2, 
-    output wire Heart3
-);
- 
 
 
-
-
-
-endmodule
