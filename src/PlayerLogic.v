@@ -45,11 +45,17 @@ module PlayerLogic (
     reg sword_duration_flag;
     reg sword_duration_flag_local;
 
-    always @(negedge clk) begin  // animation FSM
+    //Delay register
+    reg frame_end_Delay;
+
+    always @(posedge clk) begin  // animation FSM
     // <<<<<IMPORTANT<<<<<< negedge is available in vga playground and FPGA. Probably some timing issue but not sure
     // but why is it negedge anyway tho ???
         if (~reset) begin           
-            if (frame_end) begin  
+
+            frame_end_Delay <= frame_end;
+
+            if (frame_end_Delay) begin  
                 current_state <= next_state; // Update state
                 sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
                 
