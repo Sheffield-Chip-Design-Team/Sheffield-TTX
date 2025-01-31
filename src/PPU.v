@@ -273,7 +273,7 @@ module PictureProcessingUnit(
 
     // Checking whether the Entity in the general entity register should be displayed in the Local tile
     wire inRange;   
-    assign inRange = ((((local_Counter_H - general_Entity[11:8])) >= general_Entity[17:14]) && (((local_Counter_V - general_Entity[7:4])) == 0));
+    assign inRange = ((unsigned(local_Counter_H - general_Entity[11:8]) <= unsigned(general_Entity[17:14])) && (((local_Counter_V - general_Entity[7:4])) == 0));
     //These registers are used to address the ROM.
     reg [8:0] detector;    // Data Format: [8:6] Row number, [5:2] Entity ID, [1:0] Orientation  
     reg [8:0] out_entity;  
