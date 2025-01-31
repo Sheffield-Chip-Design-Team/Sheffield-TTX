@@ -43,8 +43,6 @@ module tt_um_Enjimneering_top (
         NES RECIEVER MODULE
 
 
-
-
     */
 
     // input signals
@@ -105,6 +103,16 @@ module tt_um_Enjimneering_top (
         .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
     );
 
+    wire [9:0]   Dragon_1 ;
+    wire [9:0]   Dragon_2 ;
+    wire [9:0]   Dragon_3 ;
+    wire [9:0]   Dragon_4 ;
+    wire [9:0]   Dragon_5 ;
+    wire [9:0]   Dragon_6 ;
+    wire [9:0]   Dragon_7 ;
+
+    wire [6:0] Display_en;
+
     DragonBody dragonBody(
         .clk(clk),
         .reset(~rst_n),
@@ -124,16 +132,9 @@ module tt_um_Enjimneering_top (
         .Display_en(Display_en)
     );
 
-    // Frame Control Unit
-    wire [9:0]   Dragon_1 ;
-    wire [9:0]   Dragon_2 ;
-    wire [9:0]   Dragon_3 ;
-    wire [9:0]   Dragon_4 ;
-    wire [9:0]   Dragon_5 ;
-    wire [9:0]   Dragon_6 ;
-    wire [9:0]   Dragon_7 ;
 
-    wire [6:0] Display_en;
+
+    // Frame Control Unit
 
     PictureProcessingUnit ppu (
 
@@ -141,9 +142,9 @@ module tt_um_Enjimneering_top (
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b1111_11_0101_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .entity_4                (14'b1111_11_0110_0000),
-        .entity_5                (14'b1111_11_0110_0000),
+        .entity_3                (14'b0000_11_1111_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_4                (14'b0000_11_1110_0000),
+        .entity_5                (14'b0000_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
         .entity_7_Array          (18'b1111_01_1010_0000_0111),
         .entity_8_Flip           (14'b1111_11_1111_1111),
@@ -241,5 +242,22 @@ module tt_um_Enjimneering_top (
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
     wire _unused_ok = &{ena, uio_in}; 
+
+endmodule
+
+
+// Game control 
+
+module GameStateControlUnit (
+    input wire playerLives,
+    input wire Heart1,
+    output wire Heart2, 
+    output wire Heart3
+);
+ 
+
+
+
+
 
 endmodule

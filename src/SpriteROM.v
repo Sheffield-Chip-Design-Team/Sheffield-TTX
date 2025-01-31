@@ -59,17 +59,30 @@ module SpriteROM (
     // assign read_enable = 1'b1;
 
     reg [7:0] romData [71:0];   
+    /*
 
+        romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
+        romData[1] = 8'b1_111111_1;
+        romData[2] = 8'b1_101011_1;
+        romData[3] = 8'b1_000101_1;
+        romData[4] = 8'b1_000001_1;
+        romData[5] = 8'b1_100011_1;
+        romData[6] = 8'b1_110111_1;
+        romData[7] = 8'b1_111111_1;
+
+
+
+    */
     initial begin
 
-        romData[0] = 8'b11111111; // 0000 Heart 
-        romData[1] = 8'b10011001;
-        romData[2] = 8'b00000000;
-        romData[3] = 8'b00100000;
-        romData[4] = 8'b00010000;
-        romData[5] = 8'b10000001;
-        romData[6] = 8'b11000011;
-        romData[7] = 8'b11100111;
+        romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
+        romData[1] = 8'b1_111111_1;
+        romData[2] = 8'b1_101101_1;
+        romData[3] = 8'b1_000000_1;
+        romData[4] = 8'b1_000100_1;
+        romData[5] = 8'b1_100001_1;
+        romData[6] = 8'b1_110011_1;
+        romData[7] = 8'b1_111111_1;
 
         romData[8]  = 8'b11101111; // 0001 Sword 0001
         romData[9]  = 8'b11101111;

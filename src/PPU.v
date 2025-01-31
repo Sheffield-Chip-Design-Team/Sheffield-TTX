@@ -312,6 +312,8 @@ module PictureProcessingUnit(
     
     end
 
+    wire [7:0] buffer; // ROM output buffer 
+    
     // Read From ROM
     SpriteROM Rom ( 
         .clk(clk),
@@ -322,7 +324,6 @@ module PictureProcessingUnit(
         .data(buffer)
     );
 
-    wire [7:0] buffer; // ROM output buffer 
     
     // Send the appropriate pixel value to the VGA output unit 
     always@(posedge clk)begin 
