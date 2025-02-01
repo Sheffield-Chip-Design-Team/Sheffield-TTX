@@ -59,6 +59,7 @@ module tt_um_Enjimneering_top (
     );
 
     //player logic
+    wire [1:0] playerLives;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -96,7 +97,6 @@ module tt_um_Enjimneering_top (
         .player_pos(player_pos),
     
         .vsync(vsync),
-
         .dragon_direction(dragon_direction),
         .dragon_pos(dragon_position),
         .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
@@ -113,6 +113,7 @@ module tt_um_Enjimneering_top (
     wire [6:0] VisibleSegments;
 
     DragonBody dragonBody(
+
         .clk(clk),
         .reset(~rst_n),
         .States(2'b01),
@@ -141,17 +142,17 @@ module tt_um_Enjimneering_top (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
-        .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b0000_11_1111_0000), // heart 
-        .entity_4                (14'b0000_11_1110_0000),
-        .entity_5                (14'b0000_11_1101_0000),
+        .entity_1                ({player_sprite, player_orientation , player_pos}),    // player
+        .entity_2                ({sword_visible, sword_orientation, sword_position}),  // sword
+        .entity_3                (14'b1111_11_1111_0000),                               // sheep
+        .entity_4                (14'b1111_11_1110_0000),
+        .entity_5                (14'b1111_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
-        .entity_7_Array          (18'b1111_01_1010_0000_0111),
+        .entity_7_Array          ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
         .entity_8_Flip           (14'b1111_11_1111_1111),
         .dragon_1({~VisibleSegments[0],4'b0110,Dragon_1}), 
-        .dragon_2({~VisibleSegments[1],4'b0100,Dragon_2}), 
-        .dragon_3({~VisibleSegments[2],4'b0100,Dragon_3}),  
+        .dragon_2({~VisibleSegments[1],4'b0100,Dragon_2}),  //Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .dragon_3({~VisibleSegments[2],4'b0100,Dragon_3}),  //Set the entity ID to 4'hf for unused channels.
         .dragon_4({~VisibleSegments[3],4'b0100,Dragon_4}),
         .dragon_5({~VisibleSegments[4],4'b0100,Dragon_5}),
         .dragon_6({~VisibleSegments[5],4'b0100,Dragon_6}),
@@ -161,6 +162,7 @@ module tt_um_Enjimneering_top (
 
         .colour                  (pixel_value)
     );
+
 
    // display sync signals
     wire hsync;

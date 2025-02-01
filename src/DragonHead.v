@@ -4,8 +4,10 @@
 
 
 /* 
-    Description:
-          
+    Description: 
+        The dragon head module contains the movement logic for the dragon's head. The body segments then move in turn
+        lagging behind the head.
+            
 */
 
 module DragonHead ( 

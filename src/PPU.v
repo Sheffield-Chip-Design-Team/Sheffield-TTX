@@ -59,7 +59,10 @@ module PictureProcessingUnit(
     reg [17:0] general_Entity;     // entity data register - like an MDR
     
     reg [1:0]  flip_Or_Array_Flag; // like an opcode to specify how to read the ROM and check the range
-    // 2'b11: Disable(internal). 2'b10:Array; 2'b01:Flip; 2'b00: Default
+    // 2'b11: Disable(internal).
+    // 2'b10:Array;
+    // 2'b01:Flip; 
+    // 2'b00: Default
 
     // Pixel Counters (Previous)
     reg [9:0] previous_horizontal_pixel;
