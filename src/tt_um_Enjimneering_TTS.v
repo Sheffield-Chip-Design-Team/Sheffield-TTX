@@ -132,8 +132,6 @@ module tt_um_Enjimneering_top (
         .Display_en(Display_en)
     );
 
-
-    assign heart_1 
     // Frame Control Unit
 
     PictureProcessingUnit ppu (
