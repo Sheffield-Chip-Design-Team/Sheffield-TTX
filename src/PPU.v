@@ -34,7 +34,7 @@ module PictureProcessingUnit(
     input wire [13:0] entity_4,
     input wire [13:0] entity_5,
     input wire [13:0] entity_6,
-    input wire [17:0] entity_7_Array, //Array function disable
+    input wire [17:0] entity_7_Array, //Array function enable
     input wire [13:0] entity_8_Flip,
     // input wire [13:0] entity_9_Flip,
 
@@ -187,7 +187,7 @@ module PictureProcessingUnit(
         if (!reset) begin
             case (entity_Counter)
                 4'd0: begin 
-                    general_Entity <= {entity_8_Flip,4'b0000}; 
+                    general_Entity <= {entity_8_Flip,4'b0001}; 
                     flip_Or_Array_Flag <= 2'b01;
                     end
                 4'd1:begin
@@ -195,56 +195,56 @@ module PictureProcessingUnit(
                     flip_Or_Array_Flag <= 2'b10;
                 end   
                 4'd2:begin
-                    general_Entity <= {entity_6,4'b0000};
+                    general_Entity <= {entity_6,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd3:begin 
-                    general_Entity <= {entity_5,4'b0000};
+                    general_Entity <= {entity_5,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd4:begin 
-                    general_Entity <= {entity_4,4'b0000};
+                    general_Entity <= {entity_4,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd5:begin 
-                    general_Entity <= {entity_3,4'b0000};
+                    general_Entity <= {entity_3,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd6:begin 
-                    general_Entity <= {entity_2,4'b0000};
+                    general_Entity <= {entity_2,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd7:begin 
-                    general_Entity <= {entity_1,4'b0000};
+                    general_Entity <= {entity_1,4'b0001};
                     flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd8: begin
-                    general_Entity <= {dragon_1[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_1[14],dragon_1[14]};
+                    general_Entity <= {dragon_1[13:0],3'b000,~dragon_1[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd9: begin
-                    general_Entity <= {dragon_2[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_2[14],dragon_2[14]};
+                    general_Entity <= {dragon_2[13:0],3'b000,~dragon_2[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd10: begin
-                    general_Entity <= {dragon_3[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_3[14],dragon_3[14]};
+                    general_Entity <= {dragon_3[13:0],3'b000,~dragon_3[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd11: begin
-                    general_Entity <= {dragon_4[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_4[14],dragon_4[14]};
+                    general_Entity <= {dragon_4[13:0],3'b000,~dragon_4[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd12: begin
-                    general_Entity <= {dragon_5[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_5[14],dragon_5[14]};
+                    general_Entity <= {dragon_5[13:0],3'b000,~dragon_5[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd13: begin
-                    general_Entity <= {dragon_6[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_6[14],dragon_6[14]};
+                    general_Entity <= {dragon_6[13:0],3'b000,~dragon_6[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
                 4'd14: begin
-                    general_Entity <= {dragon_7[13:0],4'b0000};
-                    flip_Or_Array_Flag <= {dragon_7[14],dragon_7[14]};
+                    general_Entity <= {dragon_7[13:0],3'b000,~dragon_7[14]};
+                    flip_Or_Array_Flag <= 2'b00;
                 end
 
                 default: begin
@@ -273,13 +273,15 @@ module PictureProcessingUnit(
 
     // Checking whether the Entity in the general entity register should be displayed in the Local tile
    
-    wire                inRange;   
-    wire unsigned [3:0] overlapFlag;
-    wire unsigned [3:0] comparisonCount;
+    wire inRange; // if entity is within the range
+    wire range_H; // if entity is within the horizontal range
+    wire range_V; // if entity is within vertical range
 
-    assign comparisonCount = local_Counter_H - general_Entity[11:8];
-    assign overlapFlag = (general_Entity[17:14] && local_Counter_V) - general_Entity[7:4];
-    assign inRange = comparisonCount > overlapFlag;
+    // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
+    assign range_H = (general_Entity[11:8] - local_Counter_H) < (general_Entity[3:0]); 
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 0;
+    assign inRange = range_H && range_V && ~general_Entity[3];
+
 
     //These registers are used to address the ROM.
     reg [8:0] detector;    // Data Format: [8:6] Row number, [5:2] Entity ID, [1:0] Orientation  
