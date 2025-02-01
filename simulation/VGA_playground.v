@@ -53,6 +53,7 @@ module tt_um_vga_example (
     );
 
     //player logic
+    wire [1:0] playerLives = 2'b11;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -133,11 +134,11 @@ module tt_um_vga_example (
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b0000_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .entity_4                (14'b0000_11_1110_0000),
-        .entity_5                (14'b0000_11_1101_0000),
+        .entity_3                (14'b1111_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_4                (14'b1111_11_1110_0000),
+        .entity_5                (14'b1111_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
-        .entity_7_Array          (18'b1111_01_1010_0000_0111),
+        .entity_7_Array          ({14'b0000_00_1111_0000, 2'b00, playerLives}),
         .entity_8_Flip           (14'b1111_11_1111_1111),
         .dragon_1({~Display_en[0],4'b0110,Dragon_1}), 
         .dragon_2({~Display_en[1],4'b0100,Dragon_2}),  //Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
@@ -836,15 +837,14 @@ endmodule
 module PictureProcessingUnit(
     input clk_in,
     input reset,    
-    input wire [13:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-    input wire [13:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
-    input wire [13:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
+    input wire [13:0] entity_1,     // Entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+    input wire [13:0] entity_2,     // Simultaneously supports up to 9 objects in the scene.
+    input wire [13:0] entity_3,     // Set the entity ID to 4'hf for unused channels.
     input wire [13:0] entity_4,
     input wire [13:0] entity_5,
     input wire [13:0] entity_6,
     input wire [17:0] entity_7_Array, //Array function enable
     input wire [13:0] entity_8_Flip,
-    // input wire [13:0] entity_9_Flip,
 
     input wire [14:0] dragon_1,
     input wire [14:0] dragon_2,
@@ -1202,7 +1202,6 @@ module SpriteROM (
     
     input            clk,
     input            reset,
-    // input wire       read_enable,
     input [1:0] orientation,
     input [3:0] sprite_ID,
     input [2:0] line_index,
@@ -1215,11 +1214,9 @@ module SpriteROM (
     localparam DOWN   = 2'b10;
     localparam LEFT   = 2'b11;
 
-    // assign read_enable = 1'b1;
 
     reg [7:0] romData [71:0];   
     /*
-
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
         romData[1] = 8'b1_111111_1;
         romData[2] = 8'b1_101011_1;
@@ -1228,10 +1225,8 @@ module SpriteROM (
         romData[5] = 8'b1_100011_1;
         romData[6] = 8'b1_110111_1;
         romData[7] = 8'b1_111111_1;
-
-
-
     */
+
     initial begin
 
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
