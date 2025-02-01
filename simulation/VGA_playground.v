@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
  * Abdulatif Babli, K Arjunav, Cameron Brizland
- * Last Updated: 02/01/2025 @ 17:45:13
+ * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2024-12-26 23:37:39.704257 
-// https://vga-playground.com/
+// BUILD TIME: 2025-02-01 18:04:57.008960 
+
 // TT Pinout (standard for TT projects - can't change this)
+// GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
+// Happy New Year!
 
 module tt_um_vga_example ( 
 
@@ -22,8 +24,20 @@ module tt_um_vga_example (
     input  wire       clk,      // clock
     input  wire       rst_n    // reset_n - low to reset   
 );
-    
- 
+
+    //system signals
+    wire NES_Clk;
+    wire NES_Latch;
+    wire NES_Data;
+
+    assign {NES_Latch,NES_Clk} = 2'b0;
+
+    /*
+        NES RECIEVER MODULE
+
+
+    */
+
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
 
@@ -81,7 +95,7 @@ module tt_um_vga_example (
         .dragon_pos(dragon_position),
         .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
     );
-    // Frame Control Unit
+
     wire [9:0]   Dragon_1 ;
     wire [9:0]   Dragon_2 ;
     wire [9:0]   Dragon_3 ;
@@ -111,6 +125,7 @@ module tt_um_vga_example (
         .Display_en(Display_en)
     );
 
+    // Frame Control Unit
 
     PictureProcessingUnit ppu (
 
@@ -118,9 +133,9 @@ module tt_um_vga_example (
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b0000_00_1111_0000), // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .entity_4                (14'b0000_00_1110_0000),
-        .entity_5                (14'b0000_00_1101_0000),
+        .entity_3                (14'b0000_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_4                (14'b0000_11_1110_0000),
+        .entity_5                (14'b0000_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
         .entity_7_Array          (18'b1111_01_1010_0000_0111),
         .entity_8_Flip           (14'b1111_11_1111_1111),
@@ -156,7 +171,8 @@ module tt_um_vga_example (
         .display_on(video_active),
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
-        .frame_end(frame_end)
+        .frame_end(frame_end),
+        .input_enable()
     );
 
     // outpout colour signals
@@ -208,20 +224,29 @@ module tt_um_vga_example (
         end
     end
 
+ 
+    // System IO Connections
+    assign uio_oe  = 8'b0000_0011;
+    assign uio_out[1:0] = {NES_Latch, NES_Clk};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-
+    
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out = 0;
-    assign uio_oe  = 0;
+    assign uio_out[7:2] = 0;
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
 
+
+
+
+
 //================================================
 
 // Module : Input Collector
-
+// Author: James Adhie Kotey
 /* 
+
+    Last Updated: 02/01/2025 @ 19:00:14
     Description:
                 takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
 
@@ -231,6 +256,8 @@ endmodule
                 2: LEFT
                 3: RIGHT
                 4: ACTION
+
+    
 */
 
 module InputController (
@@ -254,7 +281,6 @@ module InputController (
     reg [4:0] current_state   = 5'b0;
     reg [4:0] pressed_buttons = 5'b0 ;
     reg [4:0] released_buttons = 5'b0 ;
-    reg [1:0] ripple_counter = 0;
 
     always @(posedge clk) begin
         previous_state <= current_state;
@@ -292,17 +318,13 @@ endmodule
 //================================================
 
 // Module: Player Logic
+
 /*
-   Authors: Anubhav Avinaash,
-   James Ashie Kotey, Bowen Shi.
-
+   Last Updated: 27/12/2024 @ 00:15:32
+   Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
    Description:    
-        
-        Player Logic FSM - movement and attack control. Collisions, 
-        lives and respawns managed centrally in the Game State Controller.
-
-   Last Updated:
-
+        Player Logic FSM - movement and attack control. 
+        Collisions, lives and respawns managed centrally in the Game State Controller.
 */
 
 module PlayerLogic (
@@ -341,11 +363,17 @@ module PlayerLogic (
     reg sword_duration_flag;
     reg sword_duration_flag_local;
 
-    always @(negedge clk) begin  // animation FSM
+    //Delay register
+    reg frame_end_Delay;
+
+    always @(posedge clk) begin  // animation FSM
     // <<<<<IMPORTANT<<<<<< negedge is available in vga playground and FPGA. Probably some timing issue but not sure
     // but why is it negedge anyway tho ???
         if (~reset) begin           
-            if (frame_end) begin  
+
+            frame_end_Delay <= frame_end;
+
+            if (frame_end_Delay) begin  
                 current_state <= next_state; // Update state
                 sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
                 
@@ -484,14 +512,13 @@ module PlayerLogic (
                 default: begin
                     next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                 end
-
             endcase
         
         end else begin
-        sword_duration_flag <= 0;
-        next_state <= 0;
-        player_orientation <= 2'b01;
-        player_direction <= 2'b01;
+            sword_duration_flag <= 0;
+            next_state <= 0;
+            player_orientation <= 2'b01;
+            player_direction <= 2'b01;
         end
     end
 
@@ -781,6 +808,7 @@ endmodule
 
 //================================================
 // Module: Picture Processing Unit 
+// Last Updated: 15/01/2025 @ 03:50:41
 
 
 /* 
@@ -797,7 +825,7 @@ endmodule
     Array Entity Format:
             [17:4] Same as before,
             [3:0] number of tiles.
-    
+//
 */
 
 /*      
@@ -806,7 +834,7 @@ endmodule
 */
 
 module PictureProcessingUnit(
-    input clk_in,  
+    input clk_in,
     input reset,    
     input wire [13:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
     input wire [13:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
@@ -1052,8 +1080,15 @@ module PictureProcessingUnit(
     end
 
     // Checking whether the Entity in the general entity register should be displayed in the Local tile
-    wire inRange;   
-    assign inRange = ((((local_Counter_H - general_Entity[11:8])) == 0) && (((local_Counter_V - general_Entity[7:4])) == 0));
+   
+    wire                inRange;   
+    wire unsigned [3:0] overlapFlag;
+    wire unsigned [3:0] comparisonCount;
+
+    assign comparisonCount = local_Counter_H - general_Entity[11:8];
+    assign overlapFlag = (general_Entity[17:14] && local_Counter_V) - general_Entity[7:4];
+    assign inRange = comparisonCount > overlapFlag;
+
     //These registers are used to address the ROM.
     reg [8:0] detector;    // Data Format: [8:6] Row number, [5:2] Entity ID, [1:0] Orientation  
     reg [8:0] out_entity;  
@@ -1092,6 +1127,8 @@ module PictureProcessingUnit(
     
     end
 
+    wire [7:0] buffer; // ROM output buffer 
+    
     // Read From ROM
     SpriteROM Rom ( 
         .clk(clk),
@@ -1102,7 +1139,6 @@ module PictureProcessingUnit(
         .data(buffer)
     );
 
-    wire [7:0] buffer; // ROM output buffer 
     
     // Send the appropriate pixel value to the VGA output unit 
     always@(posedge clk)begin 
@@ -1180,7 +1216,20 @@ module SpriteROM (
     // assign read_enable = 1'b1;
 
     reg [7:0] romData [71:0];   
+    /*
 
+        romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
+        romData[1] = 8'b1_111111_1;
+        romData[2] = 8'b1_101011_1;
+        romData[3] = 8'b1_000101_1;
+        romData[4] = 8'b1_000001_1;
+        romData[5] = 8'b1_100011_1;
+        romData[6] = 8'b1_110111_1;
+        romData[7] = 8'b1_111111_1;
+
+
+
+    */
     initial begin
 
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
