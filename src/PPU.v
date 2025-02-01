@@ -277,7 +277,7 @@ module PictureProcessingUnit(
     wire range_H; // if entity is within the horizontal range
     wire range_V; // if entity is within vertical range
 
-    // Determine whether the difference between the entity pos and the current block pos is less than or equal to the required display length.
+    // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
     assign range_H = (general_Entity[11:8] - local_Counter_H) < (general_Entity[3:0]); 
     assign range_V = (local_Counter_V - general_Entity[7:4]) == 0;
     assign inRange = range_H && range_V && ~general_Entity[3];
