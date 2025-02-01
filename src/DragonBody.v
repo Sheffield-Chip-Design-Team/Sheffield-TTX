@@ -1,8 +1,10 @@
 
 // Module : Dragon Body
+// Author: Bowen Shi
 
 /* 
     Description:
+    The Dragon body segment 
             
 */
 

@@ -18,7 +18,6 @@
 
 // TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
-// Happy New Year!
 
 module tt_um_Enjimneering_top ( 
 
@@ -111,7 +110,7 @@ module tt_um_Enjimneering_top (
     wire [9:0]   Dragon_6 ;
     wire [9:0]   Dragon_7 ;
 
-    wire [6:0] Display_en;
+    wire [6:0] VisibleSegments;
 
     DragonBody dragonBody(
         .clk(clk),
@@ -129,30 +128,34 @@ module tt_um_Enjimneering_top (
         .Dragon_6(Dragon_6),
         .Dragon_7(Dragon_7),
 
-        .Display_en(Display_en)
+        .Display_en(VisibleSegments)
     );
 
-    // Frame Control Unit
-
+    // Picture Processing Unit
+   
+    // Set the entity ID to 4'hf for unused channels.
+    // Entity input structure: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+    // Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+     
     PictureProcessingUnit ppu (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
         .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
         .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b0000_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+        .entity_3                (14'b0000_11_1111_0000), // heart 
         .entity_4                (14'b0000_11_1110_0000),
         .entity_5                (14'b0000_11_1101_0000),
         .entity_6                (14'b1111_11_1111_1111),
         .entity_7_Array          (18'b1111_01_1010_0000_0111),
         .entity_8_Flip           (14'b1111_11_1111_1111),
-        .dragon_1({~Display_en[0],4'b0110,Dragon_1}), 
-        .dragon_2({~Display_en[1],4'b0100,Dragon_2}),  //Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .dragon_3({~Display_en[2],4'b0100,Dragon_3}),  //Set the entity ID to 4'hf for unused channels.
-        .dragon_4({~Display_en[3],4'b0100,Dragon_4}),
-        .dragon_5({~Display_en[4],4'b0100,Dragon_5}),
-        .dragon_6({~Display_en[5],4'b0100,Dragon_6}),
-        .dragon_7({~Display_en[6],4'b0100,Dragon_7}),
+        .dragon_1({~VisibleSegments[0],4'b0110,Dragon_1}), 
+        .dragon_2({~VisibleSegments[1],4'b0100,Dragon_2}), 
+        .dragon_3({~VisibleSegments[2],4'b0100,Dragon_3}),  
+        .dragon_4({~VisibleSegments[3],4'b0100,Dragon_4}),
+        .dragon_5({~VisibleSegments[4],4'b0100,Dragon_5}),
+        .dragon_6({~VisibleSegments[5],4'b0100,Dragon_6}),
+        .dragon_7({~VisibleSegments[6],4'b0100,Dragon_7}),
         .counter_V               (pix_y),
         .counter_H               (pix_x),
 
@@ -169,7 +172,7 @@ module tt_um_Enjimneering_top (
     // timing signals
     wire frame_end;
 
-    // vga unit 
+    // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
         .reset(~rst_n),
