@@ -3,7 +3,7 @@
  * Copyright (c) 2024 Tiny Tapeout LTD
  * SPDX-License-Identifier: Apache-2.0
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
- * Abdulatif Babli, K Arjunav, Cameron Brizland
+ * Abdulatif Babli, K Arjunan, Cameron Brizland
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
