@@ -135,28 +135,30 @@ module tt_um_Enjimneering_top (
     // Picture Processing Unit
    
     // Set the entity ID to 4'hf for unused channels.
-    // Entity input structure: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-    // Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+    // Set the array to 3'b000 for temporary disable channels.
+    // Flip bit, 0 means not flipped, 1 means flipped.
+    // Entity input structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
+    // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
      
     PictureProcessingUnit ppu (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos}),    // player
-        .entity_2                ({sword_visible, sword_orientation, sword_position}),  // sword
-        .entity_3                (14'b1111_11_1111_0000),                               // sheep
-        .entity_4                (14'b1111_11_1110_0000),
-        .entity_5                (14'b1111_11_1101_0000),
-        .entity_6                (14'b1111_11_1111_1111),
-        .entity_7_Array          ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
-        .entity_8_Flip           (14'b1111_11_1111_1111),
-        .dragon_1({~VisibleSegments[0],4'b0110,Dragon_1}), 
-        .dragon_2({~VisibleSegments[1],4'b0100,Dragon_2}),  //Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .dragon_3({~VisibleSegments[2],4'b0100,Dragon_3}),  //Set the entity ID to 4'hf for unused channels.
-        .dragon_4({~VisibleSegments[3],4'b0100,Dragon_4}),
-        .dragon_5({~VisibleSegments[4],4'b0100,Dragon_5}),
-        .dragon_6({~VisibleSegments[5],4'b0100,Dragon_6}),
-        .dragon_7({~VisibleSegments[6],4'b0100,Dragon_7}),
+        .entity_1                ({player_sprite, player_orientation , player_pos},4'b0001),    // player
+        .entity_2                ({sword_visible, sword_orientation, sword_position},4'b0001),  // sword
+        .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
+        .entity_4                (18'b1111_11_1110_0000_0001),
+        .entity_5                (18'b1111_11_1101_0000_0001),
+        .entity_6                (18'b1111_11_1111_1111_0001),
+        .entity_7                ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
+        .entity_8                (18'b1111_11_1111_1111_0001),
+        .dragon_1({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}), 
+        .dragon_2({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
+        .dragon_3({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
+        .dragon_4({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
+        .dragon_5({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
+        .dragon_6({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),
+        .dragon_7({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),
         .counter_V               (pix_y),
         .counter_H               (pix_x),
 

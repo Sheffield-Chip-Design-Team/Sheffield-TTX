@@ -28,23 +28,23 @@
 module PictureProcessingUnit(
     input clk_in,
     input reset,    
-    input wire [13:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-    input wire [13:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
-    input wire [13:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
-    input wire [13:0] entity_4,
-    input wire [13:0] entity_5,
-    input wire [13:0] entity_6,
-    input wire [17:0] entity_7_Array, //Array function enable
-    input wire [13:0] entity_8_Flip,
-    // input wire [13:0] entity_9_Flip,
+    input wire [17:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+    input wire [17:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
+    input wire [17:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
+    input wire [17:0] entity_4,
+    input wire [17:0] entity_5,
+    input wire [17:0] entity_6,
+    input wire [17:0] entity_7, //Array function enable
+    input wire [17:0] entity_8,
+    // input wire [13:0] entity_9,
 
-    input wire [14:0] dragon_1,
-    input wire [14:0] dragon_2,
-    input wire [14:0] dragon_3,
-    input wire [14:0] dragon_4,
-    input wire [14:0] dragon_5,
-    input wire [14:0] dragon_6,
-    input wire [14:0] dragon_7,
+    input wire [17:0] dragon_1,
+    input wire [17:0] dragon_2,
+    input wire [17:0] dragon_3,
+    input wire [17:0] dragon_4,
+    input wire [17:0] dragon_5,
+    input wire [17:0] dragon_6,
+    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -57,12 +57,6 @@ module PictureProcessingUnit(
     //internal Special Purpose Registers/Flags
     reg [3:0]  entity_Counter;     // like a Prorgram Counter but for entities instead of instructions
     reg [17:0] general_Entity;     // entity data register - like an MDR
-    
-    reg [1:0]  flip_Or_Array_Flag; // like an opcode to specify how to read the ROM and check the range
-    // 2'b11: Disable(internal).
-    // 2'b10:Array;
-    // 2'b01:Flip; 
-    // 2'b00: Default
 
     // Pixel Counters (Previous)
     reg [9:0] previous_horizontal_pixel;
@@ -190,69 +184,53 @@ module PictureProcessingUnit(
         if (!reset) begin
             case (entity_Counter)
                 4'd0: begin 
-                    general_Entity <= {entity_8_Flip,4'b0001}; 
-                    flip_Or_Array_Flag <= 2'b01;
+                    general_Entity <= entity_8; 
                     end
                 4'd1:begin
-                    general_Entity <= entity_7_Array;
-                    flip_Or_Array_Flag <= 2'b10;
+                    general_Entity <= entity_7;
                 end   
                 4'd2:begin
-                    general_Entity <= {entity_6,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_6;
                 end
                 4'd3:begin 
-                    general_Entity <= {entity_5,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_5;
                 end
                 4'd4:begin 
-                    general_Entity <= {entity_4,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_4;
                 end
                 4'd5:begin 
-                    general_Entity <= {entity_3,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_3;
                 end
                 4'd6:begin 
-                    general_Entity <= {entity_2,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_2;
                 end
                 4'd7:begin 
-                    general_Entity <= {entity_1,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_1;
                 end
                 4'd8: begin
-                    general_Entity <= {dragon_1[13:0],3'b000,~dragon_1[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_1;
                 end
                 4'd9: begin
-                    general_Entity <= {dragon_2[13:0],3'b000,~dragon_2[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_2;
                 end
                 4'd10: begin
-                    general_Entity <= {dragon_3[13:0],3'b000,~dragon_3[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_3;
                 end
                 4'd11: begin
-                    general_Entity <= {dragon_4[13:0],3'b000,~dragon_4[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_4;
                 end
                 4'd12: begin
-                    general_Entity <= {dragon_5[13:0],3'b000,~dragon_5[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_5;
                 end
                 4'd13: begin
-                    general_Entity <= {dragon_6[13:0],3'b000,~dragon_6[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_6;
                 end
                 4'd14: begin
-                    general_Entity <= {dragon_7[13:0],3'b000,~dragon_7[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_7;
                 end
 
                 default: begin
                     general_Entity <= 18'b111111000000000000;
-                    flip_Or_Array_Flag <= 2'b11;
                 end
 
             endcase
@@ -267,7 +245,6 @@ module PictureProcessingUnit(
             end
 
         end else begin // reset flags and registers
-            flip_Or_Array_Flag <= 2'b11;
             entity_Counter <= 4'b0000;
             general_Entity <=18'b111111000000000000;
         end 
@@ -281,9 +258,9 @@ module PictureProcessingUnit(
     wire range_V; // if entity is within vertical range
 
     // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
-    assign range_H = (general_Entity[11:8] - local_Counter_H) < (general_Entity[3:0]); 
-    assign range_V = (local_Counter_V - general_Entity[7:4]) == 0;
-    assign inRange = range_H && range_V && ~general_Entity[3];
+    assign range_H = (general_Entity[11:8] - local_Counter_H) < {1'b0,general_Entity[2:0]}; 
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 1'b0;
+    assign inRange = range_H && range_V;
 
 
     //These registers are used to address the ROM.
@@ -300,9 +277,9 @@ module PictureProcessingUnit(
 
                 out_entity <= out_entity;
                 
-                if ((inRange && (general_Entity[17:14] != 4'b1111)) && (flip_Or_Array_Flag != 2'b11)) begin
+                if (inRange && (general_Entity[17:14] != 4'b1111)) begin
 
-                    if (flip_Or_Array_Flag == 2'b01) begin
+                    if (general_Entity[3] == 1'b1) begin
                         detector <= {~(row_Counter), general_Entity[17:12]};
                     end else begin
                         detector <= {(row_Counter), general_Entity[17:12]};

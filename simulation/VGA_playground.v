@@ -3,7 +3,7 @@
  * Copyright (c) 2024 Tiny Tapeout LTD
  * SPDX-License-Identifier: Apache-2.0
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
- * Abdulatif Babli, K Arjunan, Cameron Brizland
+ * Abdulatif Babli, K Arjunav, Cameron Brizland
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
@@ -31,7 +31,6 @@ module tt_um_vga_example (
     wire NES_Data;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
-
     /*
         NES RECIEVER MODULE
 
@@ -53,7 +52,7 @@ module tt_um_vga_example (
     );
 
     //player logic
-    wire [1:0] playerLives = 2'b11;
+    wire [1:0] playerLives;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -91,7 +90,6 @@ module tt_um_vga_example (
         .player_pos(player_pos),
     
         .vsync(vsync),
-
         .dragon_direction(dragon_direction),
         .dragon_pos(dragon_position),
         .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
@@ -105,9 +103,10 @@ module tt_um_vga_example (
     wire [9:0]   Dragon_6 ;
     wire [9:0]   Dragon_7 ;
 
-    wire [6:0] Display_en;
+    wire [6:0] VisibleSegments;
 
     DragonBody dragonBody(
+
         .clk(clk),
         .reset(~rst_n),
         .States(2'b01),
@@ -123,35 +122,42 @@ module tt_um_vga_example (
         .Dragon_6(Dragon_6),
         .Dragon_7(Dragon_7),
 
-        .Display_en(Display_en)
+        .Display_en(VisibleSegments)
     );
 
-    // Frame Control Unit
-
+    // Picture Processing Unit
+   
+    // Set the entity ID to 4'hf for unused channels.
+    // Set the array to 3'b000 for temporary disable channels.
+    // Flip bit, 0 means not flipped, 1 means flipped.
+    // Entity input structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
+    // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
+     
     PictureProcessingUnit ppu (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos}),   //player
-        .entity_2                ({sword_visible, sword_orientation, sword_position}), //sword
-        .entity_3                (14'b1111_11_1111_0000), // heart // entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .entity_4                (14'b1111_11_1110_0000),
-        .entity_5                (14'b1111_11_1101_0000),
-        .entity_6                (14'b1111_11_1111_1111),
-        .entity_7_Array          ({14'b0000_00_1111_0000, 2'b00, playerLives}),
-        .entity_8_Flip           (14'b1111_11_1111_1111),
-        .dragon_1({~Display_en[0],4'b0110,Dragon_1}), 
-        .dragon_2({~Display_en[1],4'b0100,Dragon_2}),  //Dragon Body entity slot structure: ([15] Enable, [13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-        .dragon_3({~Display_en[2],4'b0100,Dragon_3}),  //Set the entity ID to 4'hf for unused channels.
-        .dragon_4({~Display_en[3],4'b0100,Dragon_4}),
-        .dragon_5({~Display_en[4],4'b0100,Dragon_5}),
-        .dragon_6({~Display_en[5],4'b0100,Dragon_6}),
-        .dragon_7({~Display_en[6],4'b0100,Dragon_7}),
+        .entity_1                ({player_sprite, player_orientation , player_pos,4'b0001}),    // player
+        .entity_2                ({sword_visible, sword_orientation, sword_position,4'b0001}),  // sword
+        .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
+        .entity_4                (18'b1111_11_1110_0000_0001),
+        .entity_5                (18'b1111_11_1101_0000_0001),
+        .entity_6                (18'b1111_11_1111_1111_0001),
+        .entity_7                ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
+        .entity_8                (18'b1111_11_1111_1111_0001),
+        .dragon_1({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}), 
+        .dragon_2({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
+        .dragon_3({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
+        .dragon_4({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
+        .dragon_5({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
+        .dragon_6({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),
+        .dragon_7({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),
         .counter_V               (pix_y),
         .counter_H               (pix_x),
 
         .colour                  (pixel_value)
     );
+
 
    // display sync signals
     wire hsync;
@@ -163,7 +169,7 @@ module tt_um_vga_example (
     // timing signals
     wire frame_end;
 
-    // vga unit 
+    // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
         .reset(~rst_n),
@@ -236,6 +242,11 @@ module tt_um_vga_example (
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
+
+
+
+
+
 
 
 
@@ -834,25 +845,53 @@ endmodule
         -I SpriteROM.v 
 */
 
+// Module: Picture Processing Unit 
+// Last Updated: 15/01/2025 @ 03:50:41
+
+// `include SpriteROM.v
+
+/* 
+    Description: 
+            This module takkes in entity information from the game logic and uses it to display sprites on screen 
+            with selected locations, and orientations. It can easily be adapted to provide more slots to store more 
+            entities or to repeat or flip tiles using the array or flipped slots.
+
+    General Entity Format: 
+            [13:10] Entity ID, 
+            [9:8] Orientation, 
+            [7:0] Location.
+
+    Array Entity Format:
+            [17:4] Same as before,
+            [3:0] number of tiles.
+//
+*/
+
+/*      
+    BUILD ARGS: 
+        -I SpriteROM.v 
+*/
+
 module PictureProcessingUnit(
     input clk_in,
     input reset,    
-    input wire [13:0] entity_1,     // Entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-    input wire [13:0] entity_2,     // Simultaneously supports up to 9 objects in the scene.
-    input wire [13:0] entity_3,     // Set the entity ID to 4'hf for unused channels.
-    input wire [13:0] entity_4,
-    input wire [13:0] entity_5,
-    input wire [13:0] entity_6,
-    input wire [17:0] entity_7_Array, //Array function enable
-    input wire [13:0] entity_8_Flip,
+    input wire [17:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
+    input wire [17:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
+    input wire [17:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
+    input wire [17:0] entity_4,
+    input wire [17:0] entity_5,
+    input wire [17:0] entity_6,
+    input wire [17:0] entity_7, //Array function enable
+    input wire [17:0] entity_8,
+    // input wire [13:0] entity_9,
 
-    input wire [14:0] dragon_1,
-    input wire [14:0] dragon_2,
-    input wire [14:0] dragon_3,
-    input wire [14:0] dragon_4,
-    input wire [14:0] dragon_5,
-    input wire [14:0] dragon_6,
-    input wire [14:0] dragon_7,
+    input wire [17:0] dragon_1,
+    input wire [17:0] dragon_2,
+    input wire [17:0] dragon_3,
+    input wire [17:0] dragon_4,
+    input wire [17:0] dragon_5,
+    input wire [17:0] dragon_6,
+    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -865,9 +904,6 @@ module PictureProcessingUnit(
     //internal Special Purpose Registers/Flags
     reg [3:0]  entity_Counter;     // like a Prorgram Counter but for entities instead of instructions
     reg [17:0] general_Entity;     // entity data register - like an MDR
-    
-    reg [1:0]  flip_Or_Array_Flag; // like an opcode to specify how to read the ROM and check the range
-    // 2'b11: Disable(internal). 2'b10:Array; 2'b01:Flip; 2'b00: Default
 
     // Pixel Counters (Previous)
     reg [9:0] previous_horizontal_pixel;
@@ -995,69 +1031,53 @@ module PictureProcessingUnit(
         if (!reset) begin
             case (entity_Counter)
                 4'd0: begin 
-                    general_Entity <= {entity_8_Flip,4'b0001}; 
-                    flip_Or_Array_Flag <= 2'b01;
+                    general_Entity <= entity_8; 
                     end
                 4'd1:begin
-                    general_Entity <= entity_7_Array;
-                    flip_Or_Array_Flag <= 2'b10;
+                    general_Entity <= entity_7;
                 end   
                 4'd2:begin
-                    general_Entity <= {entity_6,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_6;
                 end
                 4'd3:begin 
-                    general_Entity <= {entity_5,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_5;
                 end
                 4'd4:begin 
-                    general_Entity <= {entity_4,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_4;
                 end
                 4'd5:begin 
-                    general_Entity <= {entity_3,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_3;
                 end
                 4'd6:begin 
-                    general_Entity <= {entity_2,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_2;
                 end
                 4'd7:begin 
-                    general_Entity <= {entity_1,4'b0001};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= entity_1;
                 end
                 4'd8: begin
-                    general_Entity <= {dragon_1[13:0],3'b000,~dragon_1[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_1;
                 end
                 4'd9: begin
-                    general_Entity <= {dragon_2[13:0],3'b000,~dragon_2[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_2;
                 end
                 4'd10: begin
-                    general_Entity <= {dragon_3[13:0],3'b000,~dragon_3[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_3;
                 end
                 4'd11: begin
-                    general_Entity <= {dragon_4[13:0],3'b000,~dragon_4[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_4;
                 end
                 4'd12: begin
-                    general_Entity <= {dragon_5[13:0],3'b000,~dragon_5[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_5;
                 end
                 4'd13: begin
-                    general_Entity <= {dragon_6[13:0],3'b000,~dragon_6[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_6;
                 end
                 4'd14: begin
-                    general_Entity <= {dragon_7[13:0],3'b000,~dragon_7[14]};
-                    flip_Or_Array_Flag <= 2'b00;
+                    general_Entity <= dragon_7;
                 end
 
                 default: begin
                     general_Entity <= 18'b111111000000000000;
-                    flip_Or_Array_Flag <= 2'b11;
                 end
 
             endcase
@@ -1072,7 +1092,6 @@ module PictureProcessingUnit(
             end
 
         end else begin // reset flags and registers
-            flip_Or_Array_Flag <= 2'b11;
             entity_Counter <= 4'b0000;
             general_Entity <=18'b111111000000000000;
         end 
@@ -1086,9 +1105,9 @@ module PictureProcessingUnit(
     wire range_V; // if entity is within vertical range
 
     // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
-    assign range_H = (general_Entity[11:8] - local_Counter_H) < (general_Entity[3:0]); 
-    assign range_V = (local_Counter_V - general_Entity[7:4]) == 0;
-    assign inRange = range_H && range_V && ~general_Entity[3];
+    assign range_H = (general_Entity[11:8] - local_Counter_H) < {1'b0,general_Entity[2:0]}; 
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 4'b000;
+    assign inRange = range_H && range_V;
 
 
     //These registers are used to address the ROM.
@@ -1105,9 +1124,9 @@ module PictureProcessingUnit(
 
                 out_entity <= out_entity;
                 
-                if ((inRange && (general_Entity[17:14] != 4'b1111)) && (flip_Or_Array_Flag != 2'b11)) begin
+                if (inRange && (general_Entity[17:14] != 4'b1111)) begin
 
-                    if (flip_Or_Array_Flag == 2'b01) begin
+                    if (general_Entity[3] == 1'b1) begin
                         detector <= {~(row_Counter), general_Entity[17:12]};
                     end else begin
                         detector <= {(row_Counter), general_Entity[17:12]};
@@ -1156,6 +1175,8 @@ module PictureProcessingUnit(
 endmodule
 
 
+
+
 //================================================
 
 // Module: SpriteROM 
@@ -1202,6 +1223,7 @@ module SpriteROM (
     
     input            clk,
     input            reset,
+    // input wire       read_enable,
     input [1:0] orientation,
     input [3:0] sprite_ID,
     input [2:0] line_index,
@@ -1214,9 +1236,11 @@ module SpriteROM (
     localparam DOWN   = 2'b10;
     localparam LEFT   = 2'b11;
 
+    // assign read_enable = 1'b1;
 
     reg [7:0] romData [71:0];   
     /*
+
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
         romData[1] = 8'b1_111111_1;
         romData[2] = 8'b1_101011_1;
@@ -1225,8 +1249,10 @@ module SpriteROM (
         romData[5] = 8'b1_100011_1;
         romData[6] = 8'b1_110111_1;
         romData[7] = 8'b1_111111_1;
-    */
 
+
+
+    */
     initial begin
 
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
@@ -1368,7 +1394,7 @@ module SpriteROM (
             end else begin
                 data <= 8'b11111111;
             end
-
+    
         end
 
     endmodule
