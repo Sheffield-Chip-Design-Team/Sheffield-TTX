@@ -67,7 +67,6 @@ module GameStateControlUnit (
 
         else stateReg = 0;
 
-
     end
 
 endmodule
