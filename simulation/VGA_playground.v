@@ -329,8 +329,6 @@ endmodule
 
 //================================================
 
-// Module: Player Logic
-
 /*
    Last Updated: 27/12/2024 @ 00:15:32
    Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
@@ -368,35 +366,35 @@ module PlayerLogic (
   // player state register
   reg [1:0] current_state;
   reg [1:0] next_state;
-  reg action_complete = 0;  // flag to indicate that the action has been completed
-  reg moved_state;
+  reg action_complete;  // flag to indicate that the action has been completed
 
   // sword direction logic register
   reg [1:0] last_direction;
+  reg direction_stored;
 
   reg sword_duration_flag;
-  reg sword_duration_flag_local;
 
   reg [9:0] input_buffer;  // keeps input till there is a release
 
   always @(posedge clk) begin // Movement Input FSM
     if (~reset) begin
-
-      if (input_data[8:5] != 4'b0000) begin
+      if (input_data[9:5] != 4'b0000) begin
         input_buffer <= input_data;
       end else if (input_data[4:0] != 5'b00000) begin
         // reset input buffer when buttons are released
         input_buffer <= 0;
         action_complete <= 0;
+        direction_stored <= 0;
       end
       if (trigger) begin
         // switch between states on trigger
         current_state <= next_state;  // Update state
       end
     end else begin
-      moved_state   <= 0;
       input_buffer  <= 0;
       current_state <= 0;
+      action_complete <= 0;
+      direction_stored <= 0;
     end
   end
 
@@ -405,12 +403,18 @@ module PlayerLogic (
     if (~reset) begin
 
       if (trigger) begin
-        sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
+        // sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
 
-        if (sword_duration_flag != sword_duration_flag_local) begin
-          sword_duration <= 0;
-        end else begin
+        // if (sword_duration_flag != sword_duration_flag_local) begin
+        //   sword_duration <= 0;
+        // end else begin
+        //   sword_duration <= sword_duration + 1;
+        // end
+
+        if (sword_visible == 4'b0001) begin
           sword_duration <= sword_duration + 1;
+        end else begin
+          sword_duration <= 0;
         end
 
         if (player_anim_counter == 20) begin
@@ -427,7 +431,6 @@ module PlayerLogic (
     end else begin  // reset attack
       sword_duration <= 0;
       player_anim_counter <= 0;
-      action_complete <= 0;
     end
   end
 
@@ -440,12 +443,13 @@ module PlayerLogic (
         IDLE_STATE: begin
 
           sword_position <= 0;
-          sword_visible  <= 4'b1111;
 
-          case (input_buffer[9])
+          case (input_buffer[9] )
             1: begin  // attack
-              next_state <= ATTACK_STATE;
-              sword_duration_flag <= sword_duration_flag + 1;
+              if(~action_complete) begin
+                next_state <= ATTACK_STATE;
+                sword_duration_flag <= sword_duration_flag + 1;
+              end
             end
 
             0: begin  // no attack
@@ -501,30 +505,40 @@ module PlayerLogic (
         end
 
         ATTACK_STATE: begin
-          last_direction <= player_direction;
 
-          // Check if the sword direction is specified by the player - why does it need to set both?
-          if (input_data[5] == 1) begin
-            last_direction   <= 2'b00;
-            player_direction <= 2'b00;
+          // Check if the sword direction is specified by the player
+          if(input_buffer[8:5] != 0) begin
+            if (input_buffer[5] == 1) begin
+              last_direction   <= 2'b00;
+              player_direction <= 2'b00;
+              direction_stored <= 1;
+            end
+
+            if (input_buffer[6] == 1) begin
+              last_direction   <= 2'b10;
+              player_direction <= 2'b10;
+              direction_stored <= 1;
+            end
+
+            if (input_buffer[7] == 1) begin
+              last_direction   <= 2'b11;
+              player_direction <= 2'b11;
+              direction_stored <= 1;
+            end
+
+            if (input_buffer[8] == 1) begin
+              last_direction   <= 2'b01;
+              player_direction <= 2'b01;
+              direction_stored <= 1;
+            end
+          end
+          // if not, use the last direction
+          else begin
+            last_direction <= player_direction;
+            direction_stored <= 1;
           end
 
-          if (input_data[6] == 1) begin
-            last_direction   <= 2'b10;
-            player_direction <= 2'b10;
-          end
-
-          if (input_data[7] == 1) begin
-            last_direction   <= 2'b11;
-            player_direction <= 2'b11;
-          end
-
-          if (input_data[8] == 1) begin
-            last_direction   <= 2'b01;
-            player_direction <= 2'b01;
-          end
-
-          if (input_data[4] == 1) begin
+          if (direction_stored && input_buffer[9] == 1) begin
             // Set sword orientation
             sword_orientation <= last_direction;
 
@@ -545,12 +559,16 @@ module PlayerLogic (
               sword_position <= player_pos + 16;
             end
 
-            // Make sword visible
-            sword_visible <= 4'b0001;
+            sword_visible <= 4'b0001; // Make sword visible
+            // reset
+            action_complete <= 1; // Set action complete flag
+            direction_stored <= 0; // reset direction_stored flag
           end
 
-          if (sword_duration == ATTACK_DURATION)  // Attack State duration
+          if (sword_duration == ATTACK_DURATION) begin // Attack State duration
+            sword_visible  <= 4'b1111; // Make sword invisible
             next_state <= IDLE_STATE;  // Return to IDLE after attacking
+          end
         end
 
         default: begin
