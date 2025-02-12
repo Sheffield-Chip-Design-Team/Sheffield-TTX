@@ -29,7 +29,7 @@ module sheepLogic (
 
     );
 
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clk) begin
         if (reset) begin
             // Reset condition: sheep is not visible and position off-screen
             sheep_visible <= 0;

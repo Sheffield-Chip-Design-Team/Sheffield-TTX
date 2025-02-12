@@ -166,8 +166,7 @@ module tt_um_Enjimneering_top (
     );
 
     // Picture Processing Unit
-   
-    // Entity input structure: ([17:14] entity ID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
+    // Entity input structure: ([17:14] spriteID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
     // Set the entity ID to 4'1111 for unused channels.
     // Set the array to 3'b000 for temporary disable channels.
     // Sprite ID    -   0: Heart 1: Sword, 2: Gnome_Idle_1, 3: Gnome_Idle_2, 4: Dragon_Wing_Up,
@@ -183,7 +182,7 @@ module tt_um_Enjimneering_top (
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
         .entity_2       ({sword_visible, sword_orientation, sword_position, 4'b0001}),     // sword
-        .entity_3       (18'b1111_11_1111_0000_0001),                                      // sheep
+        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
         .entity_6       (18'b1111_11_1111_1111_0001),
