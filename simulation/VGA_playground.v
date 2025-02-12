@@ -157,8 +157,8 @@ module tt_um_vga_example (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos},4'b0001),    // player
-        .entity_2                ({sword_visible, sword_orientation, sword_position},4'b0001),  // sword
+        .entity_1                ({player_sprite, player_orientation , player_pos, 4'b0001}),    // player
+        .entity_2                ({sword_visible, sword_orientation, sword_position, 4'b0001}),  // sword
         .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
         .entity_4                (18'b1111_11_1110_0000_0001),
         .entity_5                (18'b1111_11_1101_0000_0001),
