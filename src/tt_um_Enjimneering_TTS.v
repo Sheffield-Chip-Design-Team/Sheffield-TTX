@@ -229,15 +229,15 @@ module tt_um_Enjimneering_top (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (COLLISION == 0) begin // up
-                    R <= pixel_value ? 2'b11 : 2'b11;
-                    G <= pixel_value ? 2'b11 : 0;
+                if (COLLISION == 0) begin // no collisions
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (COLLISION == 1) begin // right
-                    R <= pixel_value ? 2'b11 : 0;
-                    G <= pixel_value ? 2'b11 : 2'b11;
+                if (COLLISION == 1) begin // no collision
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
