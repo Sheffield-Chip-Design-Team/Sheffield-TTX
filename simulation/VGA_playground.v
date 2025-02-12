@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-12 21:24:52.631499 
+// BUILD TIME: 2025-02-12 21:37:16.474965 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -157,8 +157,7 @@ module tt_um_vga_example (
     );
 
     // Picture Processing Unit
-   
-    // Entity input structure: ([17:14] entity ID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
+    // Entity input structure: ([17:14] spriteID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
     // Set the entity ID to 4'1111 for unused channels.
     // Set the array to 3'b000 for temporary disable channels.
     // Sprite ID    -   0: Heart 1: Sword, 2: Gnome_Idle_1, 3: Gnome_Idle_2, 4: Dragon_Wing_Up,
@@ -174,7 +173,7 @@ module tt_um_vga_example (
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
         .entity_2       ({sword_visible, sword_orientation, sword_position, 4'b0001}),     // sword
-        .entity_3       (18'b1111_11_1111_0000_0001),                                      // sheep
+        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
         .entity_6       (18'b1111_11_1111_1111_0001),
@@ -869,7 +868,7 @@ module sheepLogic (
 
     );
 
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clk) begin
         if (reset) begin
             // Reset condition: sheep is not visible and position off-screen
             sheep_visible <= 0;
