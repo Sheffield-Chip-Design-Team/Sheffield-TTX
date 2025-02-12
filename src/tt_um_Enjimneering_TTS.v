@@ -14,8 +14,10 @@
 // `include "PlayerLogic.v"
 // `include "DragonHead.v"
 // `include "DragonBody.v"
+// `include "Sheep.v"
 // `include "Sync.v"
 // `include "PPU.v"
+
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
@@ -71,10 +73,8 @@ module tt_um_Enjimneering_top (
             Dragon_3[7:0],
             Dragon_4[7:0],
             Dragon_5[7:0],
-            Dragon_6[7:0]}
-        ),
+            Dragon_6[7:0]} ),
         .collsionCollector(COLLISION)
-
     );
 
     //player logic
@@ -149,6 +149,20 @@ module tt_um_Enjimneering_top (
         .Dragon_7(Dragon_7),
 
         .Display_en(VisibleSegments)
+    );
+// sheep logic
+    wire [7:0] sheep_pos; // 8-bit position (4 bits for X, 4 bits for Y)
+    wire [3:0] sheep_sprite;
+
+    sheepLogic sheep (
+    .clk(ui_in[7]), 
+    .reset(~rst_n),
+    .read_enable(1), 
+    .dragon_pos(dragon_pos), 
+    .player_pos(player_pos),
+    .sheep_pos(sheep_pos),
+    .sheep_visible()
+
     );
 
     // Picture Processing Unit
