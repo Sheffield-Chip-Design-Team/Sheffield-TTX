@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-12 22:27:33.421923 
+// BUILD TIME: 2025-02-12 22:32:54.785339 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -65,7 +65,7 @@ module tt_um_vga_example (
             Dragon_4[7:0],
             Dragon_5[7:0],
             Dragon_6[7:0]} ),
-        .collisionCollector(COLLISION)
+        .collsionCollector(COLLISION)
     );
 
     //player logic
@@ -148,7 +148,7 @@ module tt_um_vga_example (
     sheepLogic sheep (
     .clk(ui_in[7]), 
     .reset(~rst_n),
-    .read_enable(1'b1), 
+    .read_enable(1), 
     .dragon_pos(dragon_pos), 
     .player_pos(player_pos),
     .sheep_pos(sheep_pos),
@@ -350,12 +350,13 @@ module GameStateControlUnit (
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag,
-    output reg        collsionCollector
+    output wire       playerDragonCollisionFlag
+
 );
 
     reg [2:0] stateReg = 0;
     reg [7:0] currentSegment;
+    reg       collsionCollector;
     reg       checksegment;
     
     // make comparison to determine if there is a collision.
@@ -444,7 +445,7 @@ module PlayerLogic (
 
     input            clk,
     input            reset,
-    input wire       frame_end,
+    input wire       trigger,
     input wire [9:0] input_data,
 
     output reg [7:0] player_pos,
@@ -476,25 +477,28 @@ module PlayerLogic (
     reg sword_duration_flag;
     reg sword_duration_flag_local;
 
-    //Delay register
-    reg frame_end_Delay;
+    //Delay registers - to fix tiiming issues when using all posedge
+    reg delayedTrigger;
+    reg [9:0] inputDelay;
 
-    always @(posedge clk) begin  // animation FSM
-    // <<<<<IMPORTANT<<<<<< negedge is available in vga playground and FPGA. Probably some timing issue but not sure
-    // but why is it negedge anyway tho ???
+
+    always @(posedge clk )begin // transition control fsm
+        delayedTrigger <= trigger;
+    end
+
+    always @(posedge trigger) begin // store input in delay reg
+           inputDelay <= input_data;
+    end
+
+    always @(posedge delayedTrigger) begin
+            current_state <= next_state; // Update state
+    end
+
+
+    
+    always @(posedge trigger) begin  // animation FSM
+
         if (~reset) begin           
-
-            frame_end_Delay <= frame_end;
-
-            if (frame_end_Delay) begin  
-                current_state <= next_state; // Update state
-                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
-                
-                if (sword_duration_flag != sword_duration_flag_local) begin
-                    sword_duration <= 0;
-                end else begin
-                    sword_duration <= sword_duration + 1;
-                end
 
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
@@ -505,16 +509,34 @@ module PlayerLogic (
                 end else begin
                     player_anim_counter <= player_anim_counter +1;  
                 end
-            end
 
-        end else begin // reset attack
+        end else begin // reset to idle
             current_state <= 0;
-            sword_duration <= 0;
-            player_anim_counter <= 0;
         end
     end
 
-    always @(posedge clk) begin // Player State FSM
+    always @(posedge clk) begin  // sword FSM - TODO: refactor to not be dependant on clk
+
+        if (~reset) begin           
+
+            if (delayedTrigger) begin  
+                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.   
+                if (sword_duration_flag != sword_duration_flag_local) begin
+                    sword_duration <= 0;
+                end else begin
+                    sword_duration <= sword_duration + 1;
+                end
+            end
+
+        end else begin // reset attack
+                player_sprite <= 4'b0011;
+                player_anim_counter <= 0;
+            end
+
+    end 
+
+    always @(posedge clk) begin // Player State FSM - TODO: refactor to not be dependant on clk
+
         if(~reset)begin
             case (current_state)
                 
@@ -530,42 +552,43 @@ module PlayerLogic (
                         end
 
                         0: begin // no attack
-                            if (input_data[8:5] != 0 ) // directional buttons
+                            if (input_data[8:5] != 0 ) // directional buttons - pressed
                                 next_state <= MOVE_STATE;  // Default case, stay in IDLE state
                         end
 
                         default: begin
                             next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                         end
-                    endcase               
+                    endcase    
+      
                 end
 
                 MOVE_STATE: begin
                     // Move player based on direction inputs and update orientation
-                    if (input_data[5] == 1 && player_pos[3:0] > 4'b0001) begin   // Check boundary for up movement
+                    if (inputDelay[5] == 1 && player_pos[3:0] > 4'b0010) begin   // Check boundary for up movement
                         player_pos <= player_pos - 1;  // Move up
                         player_direction <= 2'b00;
                     end
 
-                    if (input_data[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
+                    if (inputDelay[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
                         player_pos <= player_pos + 1;  // Move down
                         player_direction <= 2'b10;
                     end 
 
-                    if (input_data[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
+                    if (inputDelay[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
                         player_pos <= player_pos - 16;  // Move left
                         player_orientation <= 2'b11;
                         player_direction <= 2'b11;
                     end
 
-                    if (input_data[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
+                    if (inputDelay[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
                         player_pos <= player_pos + 16;  // Move right
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
                     end
 
-                    next_state <= IDLE_STATE;  // Return to IDLE after moving
-                    // player_anim_counter <= 0;
+                    inputDelay <= 0;            // clear the register to prevent repeat moves
+                    next_state <= IDLE_STATE;   // Return to IDLE after moving
 
                 end
 
@@ -628,10 +651,13 @@ module PlayerLogic (
             endcase
         
         end else begin
+
             sword_duration_flag <= 0;
             next_state <= 0;
+            player_pos <= 8'b0001_0011;
             player_orientation <= 2'b01;
             player_direction <= 2'b01;
+
         end
     end
 
@@ -649,11 +675,11 @@ endmodule
             
 */
 
-module DragonHead ( 
+module DragonHead (  
 
     input clk,
     input reset,
-    input [7:0] player_pos,
+    input [7:0] targetPos,
   
     input vsync,
 
@@ -692,10 +718,10 @@ module DragonHead (
                     dragon_y <= dragon_pos[3:0];
 
                     // Calculate the differences between dragon and player
-                    dx <= player_pos[7:4] - dragon_x;
-                    dy <= player_pos[3:0] - dragon_y ;
-                    sx <= (dragon_x < player_pos[7:4]) ? 1 : -1; // Direction in axis
-                    sy <= (dragon_y < player_pos[3:0]) ? 1 : -1; 
+                    dx <= targetPos[7:4] - dragon_x;
+                    dy <= targetPos[3:0] - dragon_y ;
+                    sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
+                    sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
 
                     // Move the dragon towards the target if it's not adjacent
                     if (dx >= 1 || dy >= 1) begin
@@ -740,7 +766,6 @@ module DragonHead (
     end
 
 endmodule
-
 //================================================
 
 // Module : Dragon Body
