@@ -63,18 +63,18 @@ module tt_um_Enjimneering_top (
 
      GameStateControlUnit gamecontroller(
         .clk(clk),
-        .reset(frame_end),
+        .reset(vsync),
         .playerPos(player_pos),
         .dragonSegmentPositions(
-            {Dragon_1,
-            Dragon_2,
-            Dragon_3,
-            Dragon_4,
-            Dragon_5,
-            Dragon_6,
-            Dragon_7}
+            {dragon_position,
+            Dragon_1[7:0],
+            Dragon_2[7:0],
+            Dragon_3[7:0],
+            Dragon_4[7:0],
+            Dragon_5[7:0],
+            Dragon_6[7:0]}
         ),
-        .playerDragonCollisionFlag(COLLISION)
+        .collsionCollector(COLLISION)
 
     );
 
@@ -95,7 +95,7 @@ module tt_um_Enjimneering_top (
         .clk(clk),
         .reset(~rst_n),
         .input_data(input_data),
-        .frame_end(frame_end),
+        .trigger(frame_end),
 
         .player_pos(player_pos),
         .player_orientation(player_orientation),
@@ -107,6 +107,7 @@ module tt_um_Enjimneering_top (
         .sword_orientation(sword_orientation)
     );
 
+
     //dragon logic 
     wire [1:0] dragon_direction;
     wire [7:0] dragon_position;
@@ -115,8 +116,7 @@ module tt_um_Enjimneering_top (
     DragonHead dragonHead( 
         .clk(clk),
         .reset(~rst_n),
-        .player_pos(player_pos),
-    
+        .targetPos(player_pos),
         .vsync(vsync),
         .dragon_direction(dragon_direction),
         .dragon_pos(dragon_position),
@@ -137,11 +137,10 @@ module tt_um_Enjimneering_top (
 
         .clk(clk),
         .reset(~rst_n),
-        .States(2'b01),
-        .OrienAndPositon({dragon_direction,dragon_position}),
-        .movement_counter(movement_delay_counter),
+        .lengthUpdate(2'b01),
+        .Dragon_Head({dragon_direction, dragon_position}),
+        .movementCounter(movement_delay_counter),
         .vsync(vsync),
-
         .Dragon_1(Dragon_1),
         .Dragon_2(Dragon_2),
         .Dragon_3(Dragon_3),
@@ -155,35 +154,38 @@ module tt_um_Enjimneering_top (
 
     // Picture Processing Unit
    
-    // Set the entity ID to 4'hf for unused channels.
+    // Entity input structure: ([17:14] entity ID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
+    // Set the entity ID to 4'1111 for unused channels.
     // Set the array to 3'b000 for temporary disable channels.
-    // Flip bit, 0 means not flipped, 1 means flipped.
-    // Entity input structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
-    // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
-     
+    // Sprite ID    -   0: Heart 1: Sword, 2: Gnome_Idle_1, 3: Gnome_Idle_2, 4: Dragon_Wing_Up,
+    //                  5: Dragon_Wing_Down, 6: Dragon_Head, 7: Sheep_Idle_1, 8: Sheep_Idle_2
+    // Orientation  -   0: Up, 1: right , 2: down, 3: left
+    // Location     -   8'bxxxx_yyyyy [xcoord (0-15), ycoord (0-11)]
+    // Flip bit     -   0 means not flipped, 1 means flipped.
+    // Array        -   repeat the tile x times in the orientation direction.
+
     PictureProcessingUnit ppu (
 
-        .clk_in                  (clk),
-        .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos, 4'b0001}),    // player
-        .entity_2                ({sword_visible, sword_orientation, sword_position, 4'b0001}),  // sword
-        .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
-        .entity_4                (18'b1111_11_1110_0000_0001),
-        .entity_5                (18'b1111_11_1101_0000_0001),
-        .entity_6                (18'b1111_11_1111_1111_0001),
-        .entity_7                ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
-        .entity_8                (18'b1111_11_1111_1111_0001),
-        .dragon_1({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}), 
-        .dragon_2({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
-        .dragon_3({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
-        .dragon_4({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
-        .dragon_5({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
-        .dragon_6({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),
-        .dragon_7({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),
-        .counter_V               (pix_y),
-        .counter_H               (pix_x),
+        .clk_in         (clk),
+        .reset          (~rst_n), 
+        .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
+        .entity_2       ({sword_visible, sword_orientation, sword_position, 4'b0001}),     // sword
+        .entity_3       (18'b1111_11_1111_0000_0001),                                      // sheep
+        .entity_4       (18'b1111_11_1110_0000_0001),
+        .entity_5       (18'b1111_11_1101_0000_0001),
+        .entity_6       (18'b1111_11_1111_1111_0001),
+        .entity_7       ({14'b0000_00_1111_0000, 2'b00, playerLives}),                     // heart
+        .entity_8       (18'b1111_11_1111_1111_0001),
+        .dragon_1       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                    // dragon parts
+        .dragon_2       ({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  
+        .dragon_3       ({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
+        .dragon_4       ({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
+        .dragon_5       ({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
+        .dragon_6       ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),        
+        .counter_V      (pix_y),
+        .counter_H      (pix_x),
 
-        .colour                  (pixel_value)
+        .colour         (pixel_value)
     );
 
 
@@ -259,7 +261,3 @@ module tt_um_Enjimneering_top (
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
-
-
-
-
