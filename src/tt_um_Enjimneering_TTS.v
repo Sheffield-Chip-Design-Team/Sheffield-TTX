@@ -10,11 +10,13 @@
 // === BUILD DEPENDENCIES === 
 // `include "NESReciever.v"
 // `include "ControlInterface.v"
+// `include "GameStateController.v"
 // `include "PlayerLogic.v"
 // `include "DragonHead.v"
 // `include "DragonBody.v"
 // `include "Sync.v"
 // `include "PPU.v"
+
 
 // TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -46,8 +48,9 @@ module tt_um_Enjimneering_top (
 
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
+    wire COLLISION;
 
-    InputController ic(  // change these mappings to change the controls in the simulastor
+    InputController ic(  // change these mappings to change the controls in the simulator
         .clk(clk),
         .reset(frame_end),
         .up(ui_in[0]),
@@ -58,7 +61,25 @@ module tt_um_Enjimneering_top (
         .control_state(input_data)
     );
 
+     GameStateControlUnit gamecontroller(
+        .clk(clk),
+        .reset(frame_end),
+        .playerPos(player_pos),
+        .dragonSegmentPositions(
+            {Dragon_1,
+            Dragon_2,
+            Dragon_3,
+            Dragon_4,
+            Dragon_5,
+            Dragon_6,
+            Dragon_7}
+        ),
+        .playerDragonCollisionFlag(COLLISION)
+
+    );
+
     //player logic
+
     wire [1:0] playerLives;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
@@ -206,29 +227,18 @@ module tt_um_Enjimneering_top (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (player_direction == 0) begin // up
+                if (COLLISION == 0) begin // up
                     R <= pixel_value ? 2'b11 : 2'b11;
                     G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (player_direction == 1) begin // right
+                if (COLLISION == 1) begin // right
                     R <= pixel_value ? 2'b11 : 0;
                     G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (player_direction == 2) begin // down
-                    R <= pixel_value ? 2'b11 : 0;
-                    G <= pixel_value ? 2'b11 : 0;
-                    B <= pixel_value ? 2'b11 : 2'b11;
-                end
-
-                if (player_direction == 3) begin // left
-                    R <= pixel_value ? 2'b11 : 2'b11;
-                    G <= pixel_value ? 2'b11 : 0;
-                    B <= pixel_value ? 2'b11 : 2'b11;
-                end
 
             end else begin
                 R <= 0;

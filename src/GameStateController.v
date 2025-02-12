@@ -5,14 +5,14 @@ module GameStateControlUnit (
     input wire        clk,
     input wire        reset,
     input wire [7:0]  playerPos,
-    input wire [55:0] dragonSegmentPositions
+    input wire [55:0] dragonSegmentPositions,
+    output wire       playerDragonCollisionFlag
 
 );
 
     reg [2:0] stateReg = 0;
     reg [7:0] currentSegment;
-    wire playerDragonCollisionFlag;
-
+    
     // make comparison to determine if there is a collision.
 
     Comparator collisionDetector(
