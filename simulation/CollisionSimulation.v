@@ -480,6 +480,7 @@ module PlayerLogic (
     end
 
 
+    
     always @(posedge trigger) begin  // animation FSM
 
         if (~reset) begin           
@@ -513,6 +514,7 @@ module PlayerLogic (
             end
 
         end else begin // reset attack
+                player_sprite <= 4'b0011;
                 player_anim_counter <= 0;
             end
 
