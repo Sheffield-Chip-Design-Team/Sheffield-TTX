@@ -17,10 +17,9 @@
 // `include "Sync.v"
 // `include "PPU.v"
 
-
-// TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
+// TT Pinout (standard for TT projects - can't change this)
 module tt_um_Enjimneering_top ( 
 
     input  wire [7:0] ui_in,    // Dedicated inputs
