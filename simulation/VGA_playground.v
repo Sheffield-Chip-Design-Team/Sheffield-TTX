@@ -65,7 +65,7 @@ module tt_um_vga_example (
             Dragon_4[7:0],
             Dragon_5[7:0],
             Dragon_6[7:0]} ),
-        .collsionCollector(COLLISION)
+        .collisionCollector(COLLISION)
     );
 
     //player logic
@@ -148,7 +148,7 @@ module tt_um_vga_example (
     sheepLogic sheep (
     .clk(ui_in[7]), 
     .reset(~rst_n),
-    .read_enable(1), 
+    .read_enable(1'b1), 
     .dragon_pos(dragon_pos), 
     .player_pos(player_pos),
     .sheep_pos(sheep_pos),
@@ -350,13 +350,12 @@ module GameStateControlUnit (
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag
-
+    output wire       playerDragonCollisionFlag,
+    output reg        collsionCollector
 );
 
     reg [2:0] stateReg = 0;
     reg [7:0] currentSegment;
-    reg       collsionCollector;
     reg       checksegment;
     
     // make comparison to determine if there is a collision.

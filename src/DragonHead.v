@@ -10,11 +10,11 @@
             
 */
 
-module DragonHead ( 
+module DragonHead (  
 
     input clk,
     input reset,
-    input [7:0] player_pos,
+    input [7:0] targetPos,
   
     input vsync,
 
@@ -53,10 +53,10 @@ module DragonHead (
                     dragon_y <= dragon_pos[3:0];
 
                     // Calculate the differences between dragon and player
-                    dx <= player_pos[7:4] - dragon_x;
-                    dy <= player_pos[3:0] - dragon_y ;
-                    sx <= (dragon_x < player_pos[7:4]) ? 1 : -1; // Direction in axis
-                    sy <= (dragon_y < player_pos[3:0]) ? 1 : -1; 
+                    dx <= targetPos[7:4] - dragon_x;
+                    dy <= targetPos[3:0] - dragon_y ;
+                    sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
+                    sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
 
                     // Move the dragon towards the target if it's not adjacent
                     if (dx >= 1 || dy >= 1) begin
