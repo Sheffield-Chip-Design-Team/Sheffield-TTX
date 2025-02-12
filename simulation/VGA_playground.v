@@ -7,11 +7,11 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-01 18:04:57.008960 
+// BUILD TIME: 2025-02-12 12:26:43.676128 
+
 
 // TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
-// Happy New Year!
 
 module tt_um_vga_example ( 
 
@@ -31,6 +31,7 @@ module tt_um_vga_example (
     wire NES_Data;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
+
     /*
         NES RECIEVER MODULE
 
@@ -39,8 +40,9 @@ module tt_um_vga_example (
 
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
+    wire COLLISION;
 
-    InputController ic(  // change these mappings to change the controls in the simulastor
+    InputController ic(  // change these mappings to change the controls in the simulator
         .clk(clk),
         .reset(frame_end),
         .up(ui_in[0]),
@@ -51,7 +53,25 @@ module tt_um_vga_example (
         .control_state(input_data)
     );
 
+     GameStateControlUnit gamecontroller(
+        .clk(clk),
+        .reset(frame_end),
+        .playerPos(player_pos),
+        .dragonSegmentPositions(
+            {Dragon_1,
+            Dragon_2,
+            Dragon_3,
+            Dragon_4,
+            Dragon_5,
+            Dragon_6,
+            Dragon_7}
+        ),
+        .playerDragonCollisionFlag(COLLISION)
+
+    );
+
     //player logic
+
     wire [1:0] playerLives;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
@@ -137,8 +157,8 @@ module tt_um_vga_example (
 
         .clk_in                  (clk),
         .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos,4'b0001}),    // player
-        .entity_2                ({sword_visible, sword_orientation, sword_position,4'b0001}),  // sword
+        .entity_1                ({player_sprite, player_orientation , player_pos},4'b0001),    // player
+        .entity_2                ({sword_visible, sword_orientation, sword_position},4'b0001),  // sword
         .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
         .entity_4                (18'b1111_11_1110_0000_0001),
         .entity_5                (18'b1111_11_1101_0000_0001),
@@ -199,29 +219,18 @@ module tt_um_vga_example (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (player_direction == 0) begin // up
+                if (COLLISION == 0) begin // up
                     R <= pixel_value ? 2'b11 : 2'b11;
                     G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (player_direction == 1) begin // right
+                if (COLLISION == 1) begin // right
                     R <= pixel_value ? 2'b11 : 0;
                     G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (player_direction == 2) begin // down
-                    R <= pixel_value ? 2'b11 : 0;
-                    G <= pixel_value ? 2'b11 : 0;
-                    B <= pixel_value ? 2'b11 : 2'b11;
-                end
-
-                if (player_direction == 3) begin // left
-                    R <= pixel_value ? 2'b11 : 2'b11;
-                    G <= pixel_value ? 2'b11 : 0;
-                    B <= pixel_value ? 2'b11 : 2'b11;
-                end
 
             end else begin
                 R <= 0;
@@ -242,11 +251,6 @@ module tt_um_vga_example (
     wire _unused_ok = &{ena, uio_in}; 
 
 endmodule
-
-
-
-
-
 
 
 
@@ -327,6 +331,89 @@ module InputController (
 
 endmodule
 
+//================================================
+// Game control Unit
+// Last Updated: 31/01/2025 @ 16:23:52
+
+module GameStateControlUnit (
+    input wire        clk,
+    input wire        reset,
+    input wire [7:0]  playerPos,
+    input wire [55:0] dragonSegmentPositions,
+    output wire       playerDragonCollisionFlag
+
+);
+
+    reg [2:0] stateReg = 0;
+    reg [7:0] currentSegment;
+    
+    // make comparison to determine if there is a collision.
+
+    Comparator collisionDetector(
+    .inA(playerPos),
+    .inB(currentSegment),
+    .out(playerDragonCollisionFlag)
+    );
+
+    always@(posedge clk) begin
+
+        if (!reset) begin
+
+        case(stateReg)
+            0: begin    // read from the first dragon segment
+                currentSegment <= dragonSegmentPositions[7:0];
+                stateReg = stateReg + 1;
+            end
+
+            1: begin
+                currentSegment <= dragonSegmentPositions[15:8];
+                stateReg = stateReg + 1;
+            end
+
+            2: begin
+                currentSegment <= dragonSegmentPositions[23:16];
+                stateReg = stateReg + 1;
+            end
+
+            3: begin
+                currentSegment <= dragonSegmentPositions[31:24];
+                stateReg = stateReg + 1;
+            end
+
+            4: begin
+                currentSegment <= dragonSegmentPositions[39:32];
+                stateReg = stateReg + 1;
+            end
+
+            5: begin
+                currentSegment <= dragonSegmentPositions[47:40];
+                stateReg = stateReg + 1;
+            end
+
+            6: begin
+                currentSegment <= dragonSegmentPositions[55:48];
+                stateReg = 0;
+            end
+
+        endcase
+
+        end
+
+        else stateReg = 0;
+
+    end
+
+endmodule
+
+module Comparator (
+    input wire [7:0] inA,
+    input wire [7:0] inB,
+    output wire out
+);
+
+    assign out = (inA == inB);
+
+endmodule
 //================================================
 
 // Module: Player Logic
@@ -542,8 +629,10 @@ endmodule
 
 
 /* 
-    Description:
-          
+    Description: 
+        The dragon head module contains the movement logic for the dragon's head. The body segments then move in turn
+        lagging behind the head.
+            
 */
 
 module DragonHead ( 
@@ -641,9 +730,11 @@ endmodule
 //================================================
 
 // Module : Dragon Body
+// Author: Bowen Shi
 
 /* 
     Description:
+    The Dragon body segment 
             
 */
 
@@ -822,33 +913,6 @@ endmodule
 // Module: Picture Processing Unit 
 // Last Updated: 15/01/2025 @ 03:50:41
 
-
-/* 
-    Description: 
-            This module takkes in entity information from the game logic and uses it to display sprites on screen 
-            with selected locations, and orientations. It can easily be adapted to provide more slots to store more 
-            entities or to repeat or flip tiles using the array or flipped slots.
-
-    General Entity Format: 
-            [13:10] Entity ID, 
-            [9:8] Orientation, 
-            [7:0] Location.
-
-    Array Entity Format:
-            [17:4] Same as before,
-            [3:0] number of tiles.
-//
-*/
-
-/*      
-    BUILD ARGS: 
-        -I SpriteROM.v 
-*/
-
-// Module: Picture Processing Unit 
-// Last Updated: 15/01/2025 @ 03:50:41
-
-// `include SpriteROM.v
 
 /* 
     Description: 
@@ -1106,7 +1170,7 @@ module PictureProcessingUnit(
 
     // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
     assign range_H = (general_Entity[11:8] - local_Counter_H) < {1'b0,general_Entity[2:0]}; 
-    assign range_V = (local_Counter_V - general_Entity[7:4]) == 4'b000;
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 1'b0;
     assign inRange = range_H && range_V;
 
 
@@ -1173,8 +1237,6 @@ module PictureProcessingUnit(
     end
 
 endmodule
-
-
 
 
 //================================================
@@ -1394,7 +1456,7 @@ module SpriteROM (
             end else begin
                 data <= 8'b11111111;
             end
-    
+
         end
 
     endmodule
