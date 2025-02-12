@@ -1,0 +1,6 @@
+{
+    "verilog.ctags.path": "/usr/local/Cellar/universal-ctags/p6.1.20241103.0/bin",
+    "verilog.linting.iverilog.runAtFileLocation": true,
+    "verilog.linting.linter": "iverilog",
+    "verilog.linting.path": "/usr/local/Cellar/icarus-verilog/12.0/bin"
+}
