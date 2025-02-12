@@ -7,12 +7,12 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-12 12:26:43.676128 
+// BUILD TIME: 2025-02-12 21:24:52.631499 
 
 
-// TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
+// TT Pinout (standard for TT projects - can't change this)
 module tt_um_vga_example ( 
 
     input  wire [7:0] ui_in,    // Dedicated inputs
@@ -55,7 +55,7 @@ module tt_um_vga_example (
 
      GameStateControlUnit gamecontroller(
         .clk(clk),
-        .reset(frame_end),
+        .reset(vsync),
         .playerPos(player_pos),
         .dragonSegmentPositions(
             {dragon_position,
@@ -64,10 +64,8 @@ module tt_um_vga_example (
             Dragon_3[7:0],
             Dragon_4[7:0],
             Dragon_5[7:0],
-            Dragon_6[7:0]}
-        ),
+            Dragon_6[7:0]} ),
         .collsionCollector(COLLISION)
-
     );
 
     //player logic
@@ -143,6 +141,20 @@ module tt_um_vga_example (
 
         .Display_en(VisibleSegments)
     );
+// sheep logic
+    wire [7:0] sheep_pos; // 8-bit position (4 bits for X, 4 bits for Y)
+    wire [3:0] sheep_sprite;
+
+    sheepLogic sheep (
+    .clk(ui_in[7]), 
+    .reset(~rst_n),
+    .read_enable(1), 
+    .dragon_pos(dragon_pos), 
+    .player_pos(player_pos),
+    .sheep_pos(sheep_pos),
+    .sheep_visible()
+
+    );
 
     // Picture Processing Unit
    
@@ -158,7 +170,6 @@ module tt_um_vga_example (
 
     PictureProcessingUnit ppu (
 
-<<<<<<< HEAD
         .clk_in         (clk),
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
@@ -177,29 +188,8 @@ module tt_um_vga_example (
         .dragon_6       ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),        
         .counter_V      (pix_y),
         .counter_H      (pix_x),
-=======
-        .clk_in                  (clk),
-        .reset                   (~rst_n),
-        .entity_1                ({player_sprite, player_orientation , player_pos, 4'b0001}),    // player
-        .entity_2                ({sword_visible, sword_orientation, sword_position, 4'b0001}),  // sword
-        .entity_3                (18'b1111_11_1111_0000_0001),                               // sheep
-        .entity_4                (18'b1111_11_1110_0000_0001),
-        .entity_5                (18'b1111_11_1101_0000_0001),
-        .entity_6                (18'b1111_11_1111_1111_0001),
-        .entity_7                ({14'b0000_00_1111_0000, 2'b00, playerLives}),         // heart
-        .entity_8                (18'b1111_11_1111_1111_0001),
-        .dragon_1({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}), 
-        .dragon_2({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  // Dragon Body entity slot structure: ([17:10] entity ID, [15:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)).
-        .dragon_3({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
-        .dragon_4({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
-        .dragon_5({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
-        .dragon_6({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),
-        .dragon_7({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),
-        .counter_V               (pix_y),
-        .counter_H               (pix_x),
->>>>>>> 1cc38d79c5911d8181eeb6efe8c9b3114604290b
 
-        .colour                  (pixel_value)
+        .colour         (pixel_value)
     );
 
 
@@ -243,15 +233,15 @@ module tt_um_vga_example (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (COLLISION == 0) begin // up
-                    R <= pixel_value ? 2'b11 : 2'b11;
-                    G <= pixel_value ? 2'b11 : 0;
+                if (COLLISION == 0) begin // no collisions
+                    R <= pixel_value ? 2'b11 : 0;
+                    G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (COLLISION == 1) begin // right
-                    R <= pixel_value ? 2'b11 : 0;
-                    G <= pixel_value ? 2'b11 : 2'b11;
+                if (COLLISION == 1) begin // no collision
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
@@ -355,22 +345,19 @@ endmodule
 // Game control Unit
 // Last Updated: 31/01/2025 @ 16:23:52
 
-// Game control Unit
-// Last Updated: 31/01/2025 @ 16:23:52
-
 module GameStateControlUnit (
     input wire        clk,
     input wire        reset,
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag,
-    output reg        collsionCollector
+    output wire       playerDragonCollisionFlag
 
 );
 
     reg [2:0] stateReg = 0;
     reg [7:0] currentSegment;
+    reg       collsionCollector;
     reg       checksegment;
     
     // make comparison to determine if there is a collision.
@@ -447,11 +434,19 @@ endmodule
 
 // Module: Player Logic
 
+/*
+   Last Updated: 27/12/2024 @ 00:15:32
+   Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
+   Description:    
+        Player Logic FSM - movement and attack control. 
+        Collisions, lives and respawns managed centrally in the Game State Controller.
+*/
+
 module PlayerLogic (
 
     input            clk,
     input            reset,
-    input wire       trigger,
+    input wire       frame_end,
     input wire [9:0] input_data,
 
     output reg [7:0] player_pos,
@@ -483,27 +478,25 @@ module PlayerLogic (
     reg sword_duration_flag;
     reg sword_duration_flag_local;
 
-    //Delay registers - to fix tiiming issues when using all posedge
-    reg delayedTrigger;
-    reg [9:0] inputDelay;
+    //Delay register
+    reg frame_end_Delay;
 
-
-    always @(posedge clk )begin // transition control fsm
-        delayedTrigger <= trigger;
-    end
-
-    always @(posedge trigger) begin // store input in delay reg
-           inputDelay <= input_data;
-    end
-
-    always @(posedge delayedTrigger) begin
-            current_state <= next_state; // Update state
-    end
-
-
-    always @(posedge trigger) begin  // animation FSM
-
+    always @(posedge clk) begin  // animation FSM
+    // <<<<<IMPORTANT<<<<<< negedge is available in vga playground and FPGA. Probably some timing issue but not sure
+    // but why is it negedge anyway tho ???
         if (~reset) begin           
+
+            frame_end_Delay <= frame_end;
+
+            if (frame_end_Delay) begin  
+                current_state <= next_state; // Update state
+                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.
+                
+                if (sword_duration_flag != sword_duration_flag_local) begin
+                    sword_duration <= 0;
+                end else begin
+                    sword_duration <= sword_duration + 1;
+                end
 
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
@@ -514,33 +507,16 @@ module PlayerLogic (
                 end else begin
                     player_anim_counter <= player_anim_counter +1;  
                 end
-
-        end else begin // reset to idle
-            current_state <= 0;
-        end
-    end
-
-    always @(posedge clk) begin  // sword FSM - TODO: refactor to not be dependant on clk
-
-        if (~reset) begin           
-
-            if (delayedTrigger) begin  
-                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.   
-                if (sword_duration_flag != sword_duration_flag_local) begin
-                    sword_duration <= 0;
-                end else begin
-                    sword_duration <= sword_duration + 1;
-                end
             end
 
         end else begin // reset attack
-                player_anim_counter <= 0;
-            end
+            current_state <= 0;
+            sword_duration <= 0;
+            player_anim_counter <= 0;
+        end
+    end
 
-    end 
-
-    always @(posedge clk) begin // Player State FSM - TODO: refactor to not be dependant on clk
-
+    always @(posedge clk) begin // Player State FSM
         if(~reset)begin
             case (current_state)
                 
@@ -556,43 +532,42 @@ module PlayerLogic (
                         end
 
                         0: begin // no attack
-                            if (input_data[8:5] != 0 ) // directional buttons - pressed
+                            if (input_data[8:5] != 0 ) // directional buttons
                                 next_state <= MOVE_STATE;  // Default case, stay in IDLE state
                         end
 
                         default: begin
                             next_state <= IDLE_STATE;  // Default case, stay in IDLE state
                         end
-                    endcase    
-      
+                    endcase               
                 end
 
                 MOVE_STATE: begin
                     // Move player based on direction inputs and update orientation
-                    if (inputDelay[5] == 1 && player_pos[3:0] > 4'b0010) begin   // Check boundary for up movement
+                    if (input_data[5] == 1 && player_pos[3:0] > 4'b0001) begin   // Check boundary for up movement
                         player_pos <= player_pos - 1;  // Move up
                         player_direction <= 2'b00;
                     end
 
-                    if (inputDelay[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
+                    if (input_data[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
                         player_pos <= player_pos + 1;  // Move down
                         player_direction <= 2'b10;
                     end 
 
-                    if (inputDelay[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
+                    if (input_data[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
                         player_pos <= player_pos - 16;  // Move left
                         player_orientation <= 2'b11;
                         player_direction <= 2'b11;
                     end
 
-                    if (inputDelay[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
+                    if (input_data[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
                         player_pos <= player_pos + 16;  // Move right
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
                     end
 
-                    inputDelay <= 0;            // clear the register to prevent repeat moves
-                    next_state <= IDLE_STATE;   // Return to IDLE after moving
+                    next_state <= IDLE_STATE;  // Return to IDLE after moving
+                    // player_anim_counter <= 0;
 
                 end
 
@@ -655,26 +630,19 @@ module PlayerLogic (
             endcase
         
         end else begin
-
             sword_duration_flag <= 0;
             next_state <= 0;
-            player_pos <= 8'b0001_0011;
             player_orientation <= 2'b01;
             player_direction <= 2'b01;
-
         end
     end
 
 endmodule
-
-
 //================================================
 
 // Module : Dragon Head
 // Author: Abdulatif Babli
 
-// changes: playerPos -> targetPos
-// 
 
 /* 
     Description: 
@@ -683,11 +651,11 @@ endmodule
             
 */
 
-module DragonHead (  
+module DragonHead ( 
 
     input clk,
     input reset,
-    input [7:0] targetPos,
+    input [7:0] player_pos,
   
     input vsync,
 
@@ -726,10 +694,10 @@ module DragonHead (
                     dragon_y <= dragon_pos[3:0];
 
                     // Calculate the differences between dragon and player
-                    dx <= targetPos[7:4] - dragon_x;
-                    dy <= targetPos[3:0] - dragon_y ;
-                    sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
-                    sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
+                    dx <= player_pos[7:4] - dragon_x;
+                    dy <= player_pos[3:0] - dragon_y ;
+                    sx <= (dragon_x < player_pos[7:4]) ? 1 : -1; // Direction in axis
+                    sy <= (dragon_y < player_pos[3:0]) ? 1 : -1; 
 
                     // Move the dragon towards the target if it's not adjacent
                     if (dx >= 1 || dy >= 1) begin
@@ -780,10 +748,6 @@ endmodule
 // Module : Dragon Body
 // Author: Bowen Shi
 
-// Changes
-// renamed ports
-//  OrenPositrion -> Dragon_Head
-//  State
 /* 
     Description:
     The Dragon body segment 
@@ -873,7 +837,114 @@ module DragonBody(
 
     endmodule
 
-    
+//================================================
+
+// Module : Sheep Logic
+
+// coordinate system  
+// location [7:0]
+// location [7:4] - the x coordinates
+// location [3:0] - the y coordinates
+// the limits for the screen are (0,0) - > (15,11)
+
+module sheepLogic (
+    input clk,
+    input reset,
+    input trigger,
+    input wire read_enable, // When high, generate random position for the sheep
+    input wire [7:0] dragon_pos, // using as seed value to ensure no overlap
+    input wire [7:0] player_pos, // using as seed value to ensure no overlap
+    output reg [7:0] sheep_pos, // 8-bit position (4 bits for X, 4 bits for Y)
+    output reg [3:0] sheep_visible
+);
+
+    wire [7:0] random_value; // 8-bit random value: first 4 bits -> X, last 4 bits -> Y
+
+    // Instantiate the random number generator with seeded initial value
+    rand_num rng (
+        .clk(clk),
+        .reset(reset),
+        .seed((player_pos ^ dragon_pos) + 1'b1), // Seed with XOR of player and dragon positions +1
+        .rdm_num(random_value)                // Random value generated by the RNG
+
+    );
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            // Reset condition: sheep is not visible and position off-screen
+            sheep_visible <= 0;
+            // sheep_pos <= 8'b0; // Initialize to 0 during reset
+        end else if (read_enable) begin
+            // Sheep becomes visible
+            sheep_visible <= 1; 
+            // Generate a valid position
+            // add masks to enforce limit
+            sheep_pos[7:4] <= random_value[7:4]; 
+            
+            // enforce limit 
+            if (random_value[3:0] > 11) begin // can probably be minimised
+                sheep_pos[3:0] <= ~random_value[3:0];
+            end else begin
+                sheep_pos[3:0] <= random_value[3:0];
+            end
+
+        end
+    end
+    /*
+
+        y position  correction
+            0000       - 
+            0001       -
+            0010       -
+            0011       -
+            0100       -
+            0101       -
+            0110       -
+            0111       -
+            1000       -
+            1001       -
+            1010       -
+            1011       -
+            1100       0011
+            1101       0010
+            1110       0001  
+            1111       0000
+    */
+
+    endmodule
+
+    module rand_num (
+        input wire clk,
+        input wire reset,
+        input wire [7:0] seed, // Seed input for initializing randomness
+        output reg [7:0] rdm_num
+    );
+
+    reg [2:0] counter;
+
+    always @(posedge clk or posedge reset) begin
+        
+        if (reset) begin // for when we need a new random immediately
+            rdm_num <= seed;  // Initialize value using the trigger
+            counter <= 7;     // Reset counter
+        
+        end else if (counter > 0) begin
+            // Shift and apply feedback for randomness
+            rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
+            rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
+            counter <= counter - 1;        // Decrement counter
+
+        end else begin
+            counter <= 7;  // Reset counter for next random number
+            rdm_num <= seed;
+        end
+    end
+
+endmodule
+
+
+
+
 //================================================
 // Module - Sync Unit Ouput Module 
 
@@ -990,27 +1061,19 @@ endmodule
 //
 */
 
-/*      
-    BUILD ARGS: 
-        -I SpriteROM.v 
-*/
-
-
-//entity input form: ([17:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
 
 module PictureProcessingUnit(
     input clk_in,
     input reset,    
     input wire [17:0] entity_1,  
-    input wire [17:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
-    input wire [17:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
+    input wire [17:0] entity_2,  
+    input wire [17:0] entity_3,  
     input wire [17:0] entity_4,
     input wire [17:0] entity_5,
     input wire [17:0] entity_6,
-    input wire [17:0] entity_7, //Array function enable
+    input wire [17:0] entity_7, 
     input wire [17:0] entity_8,
-    // input wire [13:0] entity_9,
-
+    
     input wire [17:0] dragon_1,
     input wire [17:0] dragon_2,
     input wire [17:0] dragon_3,
