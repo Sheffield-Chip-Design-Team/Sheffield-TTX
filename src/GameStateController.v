@@ -64,7 +64,7 @@ module GameStateControlUnit (
 
                 6: begin
                     currentSegment <= dragonSegmentPositions[55:48];
-                    stateReg = 0;
+                    stateReg = standard;
                 end
 
             endcase
