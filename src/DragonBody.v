@@ -38,34 +38,30 @@ module DragonBody(
 
     reg pre_vsync;
 
-    always @(posedge clk)begin
+    always @(posedge vsync)begin
         
-        if (~reset) begin
-        
-            pre_vsync <= vsync;
+    if (~reset) begin
+            
+            if (movementCounter == 6'd10) begin
+                Dragon_1 <= Dragon_Head;
+                Dragon_2 <= Dragon_1;
+                Dragon_3 <= Dragon_2;
+                Dragon_4 <= Dragon_3;
+                Dragon_5 <= Dragon_4;
+                Dragon_6 <= Dragon_5;
+                Dragon_7 <= Dragon_6;
+            end
 
-            if (pre_vsync != vsync && pre_vsync == 0) begin
-                
-                if (movementCounter == 6'd10) begin
-                    Dragon_1 <= Dragon_Head;
-                    Dragon_2 <= Dragon_1;
-                    Dragon_3 <= Dragon_2;
-                    Dragon_4 <= Dragon_3;
-                    Dragon_5 <= Dragon_4;
-                    Dragon_6 <= Dragon_5;
-                    Dragon_7 <= Dragon_6;
-                end
-
-        end end else begin
-            Dragon_1 <= 0;
-            Dragon_2 <= 0;
-            Dragon_3 <= 0;
-            Dragon_4 <= 0;
-            Dragon_5 <= 0;
-            Dragon_6 <= 0;
-            Dragon_7 <= 0;
-        end
+    end end else begin
+        Dragon_1 <= 0;
+        Dragon_2 <= 0;
+        Dragon_3 <= 0;
+        Dragon_4 <= 0;
+        Dragon_5 <= 0;
+        Dragon_6 <= 0;
+        Dragon_7 <= 0;
     end
+
 
     always @( posedge clk )begin
         

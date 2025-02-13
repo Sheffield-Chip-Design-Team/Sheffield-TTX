@@ -67,13 +67,13 @@ module tt_um_Enjimneering_top (
         .reset(vsync),
         .playerPos(player_pos),
         .dragonSegmentPositions(
-            {dragon_position,
-            Dragon_1[7:0],
+            {Dragon_1[7:0],
             Dragon_2[7:0],
             Dragon_3[7:0],
             Dragon_4[7:0],
             Dragon_5[7:0],
-            Dragon_6[7:0]} ),
+            Dragon_6[7:0],
+            Dragon_7[7:0]} ),
         .collsionCollector(COLLISION)
     );
 
