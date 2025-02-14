@@ -52,14 +52,15 @@ module DragonBody(
                 Dragon_7 <= Dragon_6;
             end
 
-    end end else begin
-        Dragon_1 <= 0;
-        Dragon_2 <= 0;
-        Dragon_3 <= 0;
-        Dragon_4 <= 0;
-        Dragon_5 <= 0;
-        Dragon_6 <= 0;
-        Dragon_7 <= 0;
+            end  else begin
+                Dragon_1 <= 0;
+                Dragon_2 <= 0;
+                Dragon_3 <= 0;
+                Dragon_4 <= 0;
+                Dragon_5 <= 0;
+                Dragon_6 <= 0;
+                Dragon_7 <= 0;
+            end
     end
 
 
