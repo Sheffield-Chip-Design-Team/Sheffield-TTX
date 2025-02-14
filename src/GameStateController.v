@@ -7,8 +7,8 @@ module GameStateControlUnit (
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag
-    output reg        collisionCollector;
+    output wire       playerDragonCollisionFlag,
+    output reg        collisionCollector
 
 );
 
@@ -64,7 +64,6 @@ module GameStateControlUnit (
 
                 6: begin
                     currentSegment <= dragonSegmentPositions[55:48];
-                    stateReg = standard;
                 end
 
             endcase

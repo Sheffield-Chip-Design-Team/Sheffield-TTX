@@ -74,7 +74,7 @@ module tt_um_Enjimneering_top (
             Dragon_5[7:0],
             Dragon_6[7:0],
             Dragon_7[7:0]} ),
-        .collsionCollector(COLLISION)
+        .collisionCollector(COLLISION)
     );
 
     //player logic
