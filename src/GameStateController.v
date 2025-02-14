@@ -5,71 +5,105 @@ module GameStateControlUnit (
     input wire        clk,
     input wire        reset,
     input wire [7:0]  playerPos,
+    input wire [7:0]  swordPos,
+    input wire [7:0]  sheepPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag,
-    output reg        collisionCollector
-
+    output reg        playerDragonCollision,
+    output reg        swordDragonCollision,
+    output reg        sheepDragonCollision
 );
 
-    reg [2:0] stateReg = 0;
-    reg [7:0] currentSegment;
     reg       checksegment;
+    reg [2:0] segmentCounter = 0;
+    reg [7:0] dragonSegment;
+
+    wire PlayerDragonCollisionFlag;
+    wire SwordDragonCollisionFlag;
+    wire SheepDragonCollisionFlag;
     
     // make comparison to determine if there is a collision.
 
-    Comparator collisionDetector(
-    .inA(playerPos),
-    .inB(currentSegment),
-    .out(playerDragonCollisionFlag)
+    Comparator dragonPlayer(
+        .inA(playerPos),
+        .inB(dragonSegment),
+        .out(PlayerDragonCollisionFlag)
+    );
+
+    Comparator dragonSword(
+        .inA(swordPos),
+        .inB(dragonSegment),
+        .out(SwordDragonCollisionFlag)
+    );
+
+    Comparator dragonSheep(
+        .inA(sheepPos),
+        .inB(dragonSegment),
+        .out(SheepDragonCollisionFlag)
     );
 
     always@(posedge clk) begin
 
         if (!reset) begin
             
-            checksegment <= (stateReg & activeDragonSegments[stateReg]);
-            collisionCollector <= collisionCollector | playerDragonCollisionFlag;
+            //check that current dragon segement is active
+            checksegment <= ((8'b0000_0001 << segmentCounter) & (activeDragonSegments[segmentCounter]) != 0);
 
-            case(stateReg)
-                0: begin    // read from the first dragon segment
-                    currentSegment <= dragonSegmentPositions[7:0];
-                    stateReg = stateReg + 1;
-                end
+            playerDragonCollision <= playerDragonCollision | PlayerDragonCollisionFlag;
+            swordDragonCollision  <= swordDragonCollision  | SwordDragonCollisionFlag;
+            sheepDragonCollision  <= sheepDragonCollision  | SheepDragonCollisionFlag;
 
-                1: begin
-                    currentSegment <= dragonSegmentPositions[15:8];
-                    stateReg = stateReg + 1;
-                end
+            case(segmentCounter) // check against each active dragon segment.
+                    
+                    0: begin
+                        if (checksegment) begin   // read from the first dragon segment
+                            dragonSegment <= dragonSegmentPositions[7:0];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                2: begin
-                    currentSegment <= dragonSegmentPositions[23:16];
-                    stateReg = stateReg + 1;
-                end
+                    1: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[15:8];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                3: begin
-                    currentSegment <= dragonSegmentPositions[31:24];
-                    stateReg = stateReg + 1;
-                end
+                    2: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[23:16];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                4: begin
-                    currentSegment <= dragonSegmentPositions[39:32];
-                    stateReg = stateReg + 1;
-                end
+                    3: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[31:24];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                5: begin
-                    currentSegment <= dragonSegmentPositions[47:40];
-                    stateReg = stateReg + 1;
-                end
+                    4: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[39:32];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                6: begin
-                    currentSegment <= dragonSegmentPositions[55:48];
-                end
+                    5: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[47:40];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
+
+                    6: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[55:48];
+                        end
+                    end
 
             endcase
 
-        end else begin
-             stateReg = 0;
+        end else begin              // reset any collision data after each frame.
+             segmentCounter <= 0;
+             playerDragonCollision <= 0;
+             swordDragonCollision <= 0;
+             sheepDragonCollision <= 0;
         end
 
     end
