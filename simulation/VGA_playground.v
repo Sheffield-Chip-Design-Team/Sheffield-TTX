@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-12 22:32:54.785339 
+// BUILD TIME: 2025-02-14 07:08:44.598024 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -58,13 +58,13 @@ module tt_um_vga_example (
         .reset(vsync),
         .playerPos(player_pos),
         .dragonSegmentPositions(
-            {dragon_position,
-            Dragon_1[7:0],
+            {Dragon_1[7:0],
             Dragon_2[7:0],
             Dragon_3[7:0],
             Dragon_4[7:0],
             Dragon_5[7:0],
-            Dragon_6[7:0]} ),
+            Dragon_6[7:0],
+            Dragon_7[7:0]} ),
         .collsionCollector(COLLISION)
     );
 
@@ -350,18 +350,13 @@ module GameStateControlUnit (
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-<<<<<<< HEAD
-    output wire       playerDragonCollisionFlag,
-    output reg        collisionCollector
-=======
     output wire       playerDragonCollisionFlag
+    output reg        collisionCollector;
 
->>>>>>> 0d635739d0736a787f13f35da21cf53c0ed366c5
 );
 
     reg [2:0] stateReg = 0;
     reg [7:0] currentSegment;
-    reg       collsionCollector;
     reg       checksegment;
     
     // make comparison to determine if there is a collision.
@@ -377,7 +372,7 @@ module GameStateControlUnit (
         if (!reset) begin
             
             checksegment <= (stateReg & activeDragonSegments[stateReg]);
-            collsionCollector <= collsionCollector | playerDragonCollisionFlag;
+            collisionCollector <= collisionCollector | playerDragonCollisionFlag;
 
             case(stateReg)
                 0: begin    // read from the first dragon segment
@@ -412,7 +407,7 @@ module GameStateControlUnit (
 
                 6: begin
                     currentSegment <= dragonSegmentPositions[55:48];
-                    stateReg = 0;
+                    stateReg = standard;
                 end
 
             endcase
@@ -705,58 +700,54 @@ module DragonHead (
 
     // Movement logic, uses bresenhams line algorithm
 
-    always @(posedge clk) begin
+    always @(posedge vsync) begin
         
         if (~reset)begin
-        
-            pre_vsync <= vsync;
+                
+            if (movement_counter < 6'd10) begin
+                movement_counter <= movement_counter + 1;
             
-            if(pre_vsync != vsync && pre_vsync == 0) begin
-                
-                if (movement_counter < 6'd10) begin
-                    movement_counter <= movement_counter + 1;
-                
-                end else begin
-                    movement_counter <= 0;
-                    // Store the current position before updating , used later
-                    dragon_x <= dragon_pos[7:4];
-                    dragon_y <= dragon_pos[3:0];
+            end else begin
+                movement_counter <= 0;
+                // Store the current position before updating , used later
+                dragon_x <= dragon_pos[7:4];
+                dragon_y <= dragon_pos[3:0];
 
-                    // Calculate the differences between dragon and player
-                    dx <= targetPos[7:4] - dragon_x;
-                    dy <= targetPos[3:0] - dragon_y ;
-                    sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
-                    sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
+                // Calculate the differences between dragon and player
+                dx <= targetPos[7:4] - dragon_x;
+                dy <= targetPos[3:0] - dragon_y ;
+                sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
+                sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
 
-                    // Move the dragon towards the target if it's not adjacent
-                    if (dx >= 1 || dy >= 1) begin
-                    // Update dragon position only if it actually moves , keeps flickering
-                        if (dx >= dy) begin //prioritize movement
-                            dragon_x <= dragon_x + sx;
-                            dragon_y <= dragon_y;
-                        end else begin
-                            dragon_x <= dragon_x;
-                            dragon_y <= dragon_y + sy;
-                        end
-
-                        if (dragon_x > dragon_pos[7:4])
-                        dragon_direction <= 2'b01;   // Move right
-                        else if (dragon_x < dragon_pos[7:4])
-                        dragon_direction <= 2'b11;   // Move left
-                        else if (dragon_y > dragon_pos[3:0])
-                        dragon_direction <= 2'b10;   // Move down
-                        else if (dragon_y < dragon_pos[3:0])
-                        dragon_direction <= 2'b00;   // Move up
-
-                        // Update the next location
-                        dragon_pos <= {dragon_x, dragon_y};
+                // Move the dragon towards the target if it's not adjacent
+                if (dx >= 1 || dy >= 1) begin
+                // Update dragon position only if it actually moves , keeps flickering
+                    if (dx >= dy) begin //prioritize movement
+                        dragon_x <= dragon_x + sx;
+                        dragon_y <= dragon_y;
                     end else begin
-                        // stop moving when the dragon is adjacent to the player 
-                        dragon_x <= dragon_x; 
-                        dragon_y <= dragon_y; 
+                        dragon_x <= dragon_x;
+                        dragon_y <= dragon_y + sy;
                     end
+
+                    if (dragon_x > dragon_pos[7:4])
+                    dragon_direction <= 2'b01;   // Move right
+                    else if (dragon_x < dragon_pos[7:4])
+                    dragon_direction <= 2'b11;   // Move left
+                    else if (dragon_y > dragon_pos[3:0])
+                    dragon_direction <= 2'b10;   // Move down
+                    else if (dragon_y < dragon_pos[3:0])
+                    dragon_direction <= 2'b00;   // Move up
+
+                    // Update the next location
+                    dragon_pos <= {dragon_x, dragon_y};
+                end else begin
+                    // stop moving when the dragon is adjacent to the player 
+                    dragon_x <= dragon_x; 
+                    dragon_y <= dragon_y; 
                 end
-            end 
+            end
+
 
         end else begin
             dragon_x <= 0;
@@ -812,34 +803,30 @@ module DragonBody(
 
     reg pre_vsync;
 
-    always @(posedge clk)begin
+    always @(posedge vsync)begin
         
-        if (~reset) begin
-        
-            pre_vsync <= vsync;
+    if (~reset) begin
+            
+            if (movementCounter == 6'd10) begin
+                Dragon_1 <= Dragon_Head;
+                Dragon_2 <= Dragon_1;
+                Dragon_3 <= Dragon_2;
+                Dragon_4 <= Dragon_3;
+                Dragon_5 <= Dragon_4;
+                Dragon_6 <= Dragon_5;
+                Dragon_7 <= Dragon_6;
+            end
 
-            if (pre_vsync != vsync && pre_vsync == 0) begin
-                
-                if (movementCounter == 6'd10) begin
-                    Dragon_1 <= Dragon_Head;
-                    Dragon_2 <= Dragon_1;
-                    Dragon_3 <= Dragon_2;
-                    Dragon_4 <= Dragon_3;
-                    Dragon_5 <= Dragon_4;
-                    Dragon_6 <= Dragon_5;
-                    Dragon_7 <= Dragon_6;
-                end
-
-        end end else begin
-            Dragon_1 <= 0;
-            Dragon_2 <= 0;
-            Dragon_3 <= 0;
-            Dragon_4 <= 0;
-            Dragon_5 <= 0;
-            Dragon_6 <= 0;
-            Dragon_7 <= 0;
-        end
+    end end else begin
+        Dragon_1 <= 0;
+        Dragon_2 <= 0;
+        Dragon_3 <= 0;
+        Dragon_4 <= 0;
+        Dragon_5 <= 0;
+        Dragon_6 <= 0;
+        Dragon_7 <= 0;
     end
+
 
     always @( posedge clk )begin
         
