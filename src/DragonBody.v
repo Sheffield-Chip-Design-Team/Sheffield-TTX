@@ -9,14 +9,15 @@
 */
 
 module DragonBody(
+
     input clk,
     input reset,
     input vsync,
-    input [1:0] States, // MUST be a PULSE
-    input [9:0] OrienAndPositon, 
-    input [5:0] movement_counter,
+    input [1:0] lengthUpdate,           // MUST be a PULSE
+    input [5:0] movementCounter,
+    input [9:0] Dragon_Head,            // [9:8] orientation, [7:0]  position
 
-    output reg [9:0] Dragon_1, // Every 10 bit represent a body segment, Maximum of 8 segments, a queue
+    output reg [9:0] Dragon_1,          // Every 10 bit represent a body segment, Maximum of 8 segments, works as a queue.
     output reg [9:0] Dragon_2,
     output reg [9:0] Dragon_3,
     output reg [9:0] Dragon_4,
@@ -27,44 +28,45 @@ module DragonBody(
     output reg [6:0] Display_en
     );
 
-    localparam MOVE = 2'b00;
-    localparam HEAL = 2'b01;
-    localparam HIT = 2'b10;
-    localparam IDLE = 2'b11;
+    // lengthUpdate states
+
+    localparam MOVE = 2'b00; // do nothing
+    localparam IDLE = 2'b11; // do nothing
+    localparam HEAL = 2'b01; // grow
+    localparam HIT = 2'b10;  // shrink
+
+
     reg pre_vsync;
 
-    always @(posedge clk)begin
+    always @(posedge vsync)begin
         
-        if (~reset) begin
-        
-            pre_vsync <= vsync;
+    if (~reset) begin
+            
+            if (movementCounter == 6'd10) begin
+                Dragon_1 <= Dragon_Head;
+                Dragon_2 <= Dragon_1;
+                Dragon_3 <= Dragon_2;
+                Dragon_4 <= Dragon_3;
+                Dragon_5 <= Dragon_4;
+                Dragon_6 <= Dragon_5;
+                Dragon_7 <= Dragon_6;
+            end
 
-            if (pre_vsync != vsync && pre_vsync == 0) begin
-                
-                if (movement_counter == 6'd10) begin
-                    Dragon_1 <= OrienAndPositon;
-                    Dragon_2 <= Dragon_1;
-                    Dragon_3 <= Dragon_2;
-                    Dragon_4 <= Dragon_3;
-                    Dragon_5 <= Dragon_4;
-                    Dragon_6 <= Dragon_5;
-                    Dragon_7 <= Dragon_6;
-                end
-
-        end end else begin
-            Dragon_1 <= 0;
-            Dragon_2 <= 0;
-            Dragon_3 <= 0;
-            Dragon_4 <= 0;
-            Dragon_5 <= 0;
-            Dragon_6 <= 0;
-            Dragon_7 <= 0;
-        end
+    end end else begin
+        Dragon_1 <= 0;
+        Dragon_2 <= 0;
+        Dragon_3 <= 0;
+        Dragon_4 <= 0;
+        Dragon_5 <= 0;
+        Dragon_6 <= 0;
+        Dragon_7 <= 0;
     end
 
-    always @(posedge clk)begin
+
+    always @( posedge clk )begin
+        
         if(~reset) begin
-            case(States) 
+            case(lengthUpdate) 
                 MOVE: begin
                     Display_en <= Display_en;
                 end
@@ -84,4 +86,3 @@ module DragonBody(
     end
 
     endmodule
-    

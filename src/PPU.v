@@ -20,24 +20,19 @@
 //
 */
 
-/*      
-    BUILD ARGS: 
-        -I SpriteROM.v 
-*/
 
 module PictureProcessingUnit(
     input clk_in,
     input reset,    
-    input wire [17:0] entity_1,  //entity input form: ([13:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
-    input wire [17:0] entity_2,  //Simultaneously supports up to 9 objects in the scene.
-    input wire [17:0] entity_3,  //Set the entity ID to 4'hf for unused channels.
+    input wire [17:0] entity_1,  
+    input wire [17:0] entity_2,  
+    input wire [17:0] entity_3,  
     input wire [17:0] entity_4,
     input wire [17:0] entity_5,
     input wire [17:0] entity_6,
-    input wire [17:0] entity_7, //Array function enable
+    input wire [17:0] entity_7, 
     input wire [17:0] entity_8,
-    // input wire [13:0] entity_9,
-
+    
     input wire [17:0] dragon_1,
     input wire [17:0] dragon_2,
     input wire [17:0] dragon_3,
