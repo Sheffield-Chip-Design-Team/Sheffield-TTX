@@ -182,12 +182,12 @@ module tt_um_Enjimneering_top (
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
         .entity_2       ({sword_visible, sword_orientation, sword_position, 4'b0001}),     // sword
-        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
-        .entity_4       (18'b1111_11_1110_0000_0001),
-        .entity_5       (18'b1111_11_1101_0000_0001),
-        .entity_6       (18'b1111_11_1111_1111_0001),
-        .entity_7       ({14'b0000_00_1111_0000, 2'b00, playerLives}),                     // heart
-        .entity_8       (18'b1111_11_1111_1111_0001),
+        // .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
+        .entity_4       (20'b1111_11_11100_00000_0001),
+        .entity_5       (20'b1111_11_11010_00000_0001),
+        .entity_6       (20'b1111_11_11110_11110_0001),
+        // .entity_7       ({16'b0000_00_11111_00000, 2'b00, playerLives}),                     // heart
+        .entity_8       (20'b1111_11_1111_1111_0001),
         .dragon_1       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                    // dragon parts
         .dragon_2       ({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  
         .dragon_3       ({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
