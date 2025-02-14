@@ -527,7 +527,7 @@ module PlayerLogic (
           player_anim_counter <= player_anim_counter + 1;
         end else begin
           player_anim_counter <= player_anim_counter + 1;
-=
+
         end
       end
 
