@@ -1,24 +1,46 @@
-module PWM(
-    input clk,       // System clock
-    input rst,       // Reset signal
-    output buzzer     // PWM output for buzzer
+module APU(
+    input clk,
+    input rst,      
+    output buzzer // PWM output for buzzer
 );
-    reg buzzer;
-    reg [7:0] duty_cycle = 125 >> 8;  // >>8 divides by 256 , duty cycle/ 256 = actual duty cycle
-    parameter PWM_PERIOD = 12500; // Define period directly (50 MHz clk and 4kHz pwm,  clk/Pwm ) 
-    reg [31:0] counter;
+    
+    parameter PWM_PERIOD = 12500; // Define period directly (50 MHz clk and 4kHz pwm)
+    parameter NOTE_PERIOD = 250000000; // 5 seconds assuming 50MHz clock (50M * 5)
+    
+    reg [7:0] duty_cycle1 = 128/8; // Original duty cycle
+    reg [7:0] duty_cycle2 = 64/8; // Quarter duty cycle
 
+    reg [7:0] current_duty_cycle;
+    
+    reg [31:0] counter;
+    reg [31:0] note_counter;
+    reg toggle;
+    
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             counter <= 0;
+            note_counter <= 0;
             buzzer <= 0;
+            toggle <= 0;
+            current_duty_cycle <= duty_cycle1;
+
         end else begin
+            // PWM 
             if (counter < PWM_PERIOD - 1)
                 counter <= counter + 1;
             else
                 counter <= 0;
 
-            buzzer <= (counter < (duty_cycle * PWM_PERIOD)) ? 1 : 0;   
+            buzzer <= (counter < (current_duty_cycle * PWM_PERIOD)) ? 1 : 0;
+            
+            // Note Alternation Logic
+            if (note_counter < NOTE_PERIOD - 1)
+                note_counter <= note_counter + 1; 
+            else begin
+                note_counter <= 0;
+                toggle <= ~toggle; // toggle for alternating notes
+                current_duty_cycle <= toggle ? duty_cycle1 : duty_cycle2;
+            end
         end
     end
 endmodule
