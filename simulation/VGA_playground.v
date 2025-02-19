@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-14 07:24:17.127647 
+// BUILD TIME: 2025-02-19 10:06:56.136197 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -65,7 +65,7 @@ module tt_um_vga_example (
             Dragon_5[7:0],
             Dragon_6[7:0],
             Dragon_7[7:0]} ),
-        .collsionCollector(COLLISION)
+        .collisionCollector(COLLISION)
     );
 
     //player logic
@@ -350,8 +350,8 @@ module GameStateControlUnit (
     input wire [7:0]  playerPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag
-    output reg        collisionCollector;
+    output wire       playerDragonCollisionFlag,
+    output reg        collisionCollector
 
 );
 
@@ -407,7 +407,6 @@ module GameStateControlUnit (
 
                 6: begin
                     currentSegment <= dragonSegmentPositions[55:48];
-                    stateReg = standard;
                 end
 
             endcase
