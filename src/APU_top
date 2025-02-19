@@ -1,0 +1,24 @@
+module PWM(
+    input clk,       // System clock
+    input rst,       // Reset signal
+    output buzzer     // PWM output for buzzer
+);
+    reg buzzer;
+    reg [7:0] duty_cycle = 125 >> 8;  // >>8 divides by 256 , duty cycle/ 256 = actual duty cycle
+    parameter PWM_PERIOD = 12500; // Define period directly (50 MHz clk and 4kHz pwm,  clk/Pwm ) 
+    reg [31:0] counter;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            counter <= 0;
+            buzzer <= 0;
+        end else begin
+            if (counter < PWM_PERIOD - 1)
+                counter <= counter + 1;
+            else
+                counter <= 0;
+
+            buzzer <= (counter < (duty_cycle * PWM_PERIOD)) ? 1 : 0;   
+        end
+    end
+endmodule
