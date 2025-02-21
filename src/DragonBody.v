@@ -52,7 +52,7 @@ module DragonBody(
                 Dragon_7 <= Dragon_6;
             end
 
-            end  else begin
+            end else begin
                 Dragon_1 <= 0;
                 Dragon_2 <= 0;
                 Dragon_3 <= 0;
@@ -62,7 +62,6 @@ module DragonBody(
                 Dragon_7 <= 0;
             end
     end
-
 
     always @( posedge clk )begin
         
