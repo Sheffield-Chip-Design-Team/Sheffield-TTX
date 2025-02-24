@@ -30,7 +30,7 @@ module PlayerLogic (
     localparam IDLE_STATE   = 2'b00;  // Move when there is input from the controller
     localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
     localparam MOVE_STATE   = 2'b10;  // Wait for input and stay idle
-    localparam ATTACK_DURATION = 3'b101;
+    localparam ATTACK_DURATION = 6'b000_101;
 
     reg [5:0] player_anim_counter;
     reg [5:0] sword_duration; // how long the sword stays visible - (SET BY ATTACK DURATION)
@@ -51,27 +51,34 @@ module PlayerLogic (
 
 
     always @(posedge clk )begin // transition control fsm
+        
         delayedTrigger <= trigger;
-    end
 
-    always @(posedge trigger) begin // store input in delay reg
-           inputDelay <= input_data;
-    end
+        if (~reset) begin
 
-    always @(posedge delayedTrigger) begin
+            if (trigger) begin
+                inputDelay <= input_data;
+            end
+
+            if (delayedTrigger) begin
+                if (~reset) begin    
+                    current_state <= next_state; // Update state
+                end
+            end
+        end else begin // reset
             
-            if (~reset) begin    
-                current_state <= next_state; // Update state
+            current_state <= 0;
 
-            end else begin // reset to idle
-                current_state <= 0;
         end
+        
     end
 
-    
-    always @(posedge trigger) begin  // animation FSM
-       
-        if (~reset) begin           
+    always @(posedge clk) begin  // animation FSM
+        
+        if (~reset) begin    
+
+             if (trigger) begin       
+                        
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
                     player_sprite <= 4'b0011;
@@ -81,13 +88,20 @@ module PlayerLogic (
                 end else begin
                     player_anim_counter <= player_anim_counter +1;  
                 end
-        end 
+            end
+
+        end else begin
+            player_anim_counter <= 0;
+
+        end
+
+
+
     end
 
-    always @(posedge clk) begin  // sword FSM - TODO: refactor to not be dependant on clk
-
+    always @(posedge clk) begin  // sword FSM 
+        
         if (~reset) begin           
-
             if (delayedTrigger) begin  
                 sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.   
                 if (sword_duration_flag != sword_duration_flag_local) begin
@@ -96,15 +110,10 @@ module PlayerLogic (
                     sword_duration <= sword_duration + 1;
                 end
             end
-
-        end else begin // reset attack
-                if (~trigger) begin
-                    player_sprite <= 4'b0011;
-                    player_anim_counter <= 0;
-                end
-            end
-
-    end 
+        end else begin
+            sword_duration <= 0;
+        end
+    end
 
     always @(posedge clk) begin // Player State FSM - TODO: refactor to not be dependant on clk
 
