@@ -37,7 +37,7 @@ module tt_um_Enjimneering_top (
     //system signals
     wire NES_Clk;
     wire NES_Latch;
-    wire NES_Data;
+    wire NES_Data = 0;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
 

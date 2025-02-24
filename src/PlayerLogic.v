@@ -46,7 +46,7 @@ module PlayerLogic (
 
     //Delay registers - to fix tiiming issues when using all posedge
     reg delayedTrigger;
-    reg [9:0] inputDelay;
+    reg [9:0] inputDelay = 0;
 
     // made everythin dependant on clk
     
