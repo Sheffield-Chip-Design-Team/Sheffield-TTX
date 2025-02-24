@@ -67,7 +67,7 @@ module DragonBody(
                     Display_en <= Display_en;
                 end
                 HEAL: begin
-                    Display_en <= (Display_en << 1) | 1'b1;
+                    Display_en <= (Display_en << 1) | 7'b0000001;
                 end
                 HIT: begin
                     Display_en <= Display_en >> 1;

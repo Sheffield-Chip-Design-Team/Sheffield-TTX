@@ -271,6 +271,13 @@ module tt_um_Enjimneering_top (
     
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in}; 
+    wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
+    NES_Data, 
+    SwordDragonCollision, 
+    SheepDragonCollision, 
+    player_direction, 
+    sheep_sprite, 
+    enable_input, 
+    Dragon_7[9:8]}; 
 
 endmodule
