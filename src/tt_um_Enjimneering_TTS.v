@@ -8,15 +8,15 @@
 */
 
 // === BUILD DEPENDENCIES === 
-// `include "NESReciever.v"
-// `include "ControlInterface.v"
-// `include "GameStateController.v"
-// `include "PlayerLogic.v"
-// `include "DragonHead.v"
-// `include "DragonBody.v"
-// `include "Sheep.v"
-// `include "Sync.v"
-// `include "PPU.v"
+//   `include "NESReciever.v"
+//   `include "ControlInterface.v"
+//   `include "GameStateController.v"
+//   `include "PlayerLogic.v"
+//   `include "DragonHead.v"
+//   `include "DragonBody.v"
+//   `include "Sheep.v"
+//   `include "Sync.v"
+//   `include "PPU.v"
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -37,19 +37,16 @@ module tt_um_Enjimneering_top (
     //system signals
     wire NES_Clk;
     wire NES_Latch;
-    wire NES_Data;
+    wire NES_Data = 0;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
 
     /*
-        NES RECIEVER MODULE
-
-
+        NES/SNES RECIEVER MODULE
     */
 
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
-    wire COLLISION;
 
     InputController ic(  // change these mappings to change the controls in the simulator
         .clk(clk),
@@ -61,25 +58,33 @@ module tt_um_Enjimneering_top (
         .attack(ui_in[4]),
         .control_state(input_data)
     );
+    wire PlayerDragonCollision;
+    wire SwordDragonCollision;
+    wire SheepDragonCollision;
+    
 
-     GameStateControlUnit gamecontroller(
+     CollisionDetector collisionDetector (
         .clk(clk),
         .reset(vsync),
         .playerPos(player_pos),
+        .swordPos(sword_position),
+        .sheepPos(sheep_pos),
+        .activeDragonSegments(VisibleSegments),
         .dragonSegmentPositions(
-            {dragon_position,
-            Dragon_1[7:0],
+            {Dragon_1[7:0],
             Dragon_2[7:0],
             Dragon_3[7:0],
             Dragon_4[7:0],
             Dragon_5[7:0],
-            Dragon_6[7:0]} ),
-        .collsionCollector(COLLISION)
+            Dragon_6[7:0],
+            Dragon_7[7:0]} ),
+        .playerDragonCollision(PlayerDragonCollision),
+        .swordDragonCollision(SwordDragonCollision),
+        .sheepDragonCollision(SheepDragonCollision)
     );
 
     //player logic
-
-    wire [1:0] playerLives;
+    reg [1:0] playerLives = 3;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -106,8 +111,7 @@ module tt_um_Enjimneering_top (
         .sword_orientation(sword_orientation)
     );
 
-
-    //dragon logic 
+    // dragon logic 
     wire [1:0] dragon_direction;
     wire [7:0] dragon_position;
     wire [5:0] movement_delay_counter;
@@ -150,19 +154,19 @@ module tt_um_Enjimneering_top (
 
         .Display_en(VisibleSegments)
     );
-// sheep logic
+
+    // sheep logic
     wire [7:0] sheep_pos; // 8-bit position (4 bits for X, 4 bits for Y)
     wire [3:0] sheep_sprite;
 
     sheepLogic sheep (
-    .clk(ui_in[7]), 
-    .reset(~rst_n),
-    .read_enable(1), 
-    .dragon_pos(dragon_pos), 
-    .player_pos(player_pos),
-    .sheep_pos(sheep_pos),
-    .sheep_visible()
-
+        .clk(ui_in[7]), 
+        .reset(~rst_n),
+        .read_enable(1), 
+        .dragon_pos(dragon_position), 
+        .player_pos(player_pos),
+        .sheep_pos(sheep_pos),
+        .sheep_sprite(sheep_sprite)
     );
 
     // Picture Processing Unit
@@ -200,8 +204,7 @@ module tt_um_Enjimneering_top (
         .colour         (pixel_value)
     );
 
-
-   // display sync signals
+    // display sync signals
     wire hsync;
     wire vsync;
     wire video_active;
@@ -210,7 +213,7 @@ module tt_um_Enjimneering_top (
 
     // timing signals
     wire frame_end;
-
+    wire enable_input;
     // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -221,7 +224,7 @@ module tt_um_Enjimneering_top (
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
         .frame_end(frame_end),
-        .input_enable()
+        .input_enable(enable_input)
     );
 
     // outpout colour signals
@@ -241,18 +244,17 @@ module tt_um_Enjimneering_top (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (COLLISION == 0) begin // no collisions
+                if (PlayerDragonCollision == 0) begin // no collision - green
                     R <= pixel_value ? 2'b11 : 0;
                     G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (COLLISION == 1) begin // no collision
+                if (PlayerDragonCollision == 1) begin // collision - red
                     R <= pixel_value ? 2'b11 : 2'b11;
                     G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
-
 
             end else begin
                 R <= 0;
@@ -262,7 +264,6 @@ module tt_um_Enjimneering_top (
         end
     end
 
- 
     // System IO Connections
     assign uio_oe  = 8'b0000_0011;
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
@@ -270,6 +271,13 @@ module tt_um_Enjimneering_top (
     
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in}; 
+    wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
+    NES_Data, 
+    SwordDragonCollision, 
+    SheepDragonCollision, 
+    player_direction, 
+    sheep_sprite, 
+    enable_input, 
+    Dragon_7[9:8]}; 
 
 endmodule
