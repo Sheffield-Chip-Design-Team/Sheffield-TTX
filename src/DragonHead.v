@@ -12,11 +12,10 @@
 
 module DragonHead (  
 
-    input clk,
+    input clk, // unused?
+    input vsync,
     input reset,
     input [7:0] targetPos,
-  
-    input vsync,
 
     output reg [1:0] dragon_direction,
     output reg [7:0] dragon_pos,
@@ -31,7 +30,7 @@ module DragonHead (
     reg [3:0] sx; //figuring out direction in axis
     reg [3:0] sy;
 
-    reg pre_vsync;
+    // reg pre_vsync; - signal not driven or used
 
     // Movement logic, uses bresenhams line algorithm
 
@@ -76,6 +75,7 @@ module DragonHead (
 
                     // Update the next location
                     dragon_pos <= {dragon_x, dragon_y};
+                    
                 end else begin
                     // stop moving when the dragon is adjacent to the player 
                     dragon_x <= dragon_x; 
