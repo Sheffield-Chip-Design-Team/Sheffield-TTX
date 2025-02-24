@@ -16,236 +16,236 @@ module PlayerLogic (
     input wire [9:0] input_data,
 
     output reg [7:0] player_pos,
-    output reg [1:0] player_orientation, // player orientation 
-    output reg [1:0] player_direction,   // player direction
+    output reg [1:0] player_orientation,  // player orientation
+    output reg [1:0] player_direction,    // player direction
     output reg [3:0] player_sprite,
 
-    output reg [7:0] sword_position,     // sword position xxxx_yyyy
+    output reg [7:0] sword_position,    // sword position xxxx_yyyy
     output reg [3:0] sword_visible,
-    output reg [1:0] sword_orientation   // sword orientation   
+    output reg [1:0] sword_orientation  // sword orientation
 );
 
-    // State definitions
-    localparam IDLE_STATE   = 2'b00;  // Move when there is input from the controller
-    localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
-    localparam MOVE_STATE   = 2'b10;  // Wait for input and stay idle
-    localparam ATTACK_DURATION = 6'b000_101;
+  // State definitions
+  localparam IDLE_STATE = 2'b00;  // Move when there is input from the controller
+  localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
+  localparam MOVE_STATE = 2'b10;  // Wait for input and stay idle
+  localparam ATTACK_DURATION = 6'b000_010;
 
-    reg [5:0] player_anim_counter;
-    reg [5:0] sword_duration; // how long the sword stays visible - (SET BY ATTACK DURATION)
+  reg [5:0] player_anim_counter;
+  reg [5:0] sword_duration;  // how long the sword stays visible - (SET BY ATTACK DURATION)
 
-    // player state register
-    reg [1:0] current_state;
-    reg [1:0] next_state;
+  // player state register
+  reg [1:0] current_state;
+  reg [1:0] next_state;
+  reg action_complete;  // flag to indicate that the action has been completed
 
-    // sword direction logic register
-    reg [1:0] last_direction;
+  // sword direction logic register
+  reg [1:0] last_direction;
+  reg direction_stored;
 
-    reg sword_duration_flag;
-    reg sword_duration_flag_local;
+  reg [9:0] input_buffer;  // keeps input till there is a release
 
-    //Delay registers - to fix tiiming issues when using all posedge
-    reg delayedTrigger;
-    reg [9:0] inputDelay;
-    reg actionComplete;
-
-    // made everythin dependant on clk
-    
-    always @(posedge clk )begin // transition control fsm
-        
-        delayedTrigger <= trigger;
-
-        if (~reset) begin
-
-            if (trigger) begin
-                inputDelay <= input_data;
-            end
-
-            if (delayedTrigger) begin
-                if (~reset) begin    
-                    current_state <= next_state; // Update state
-                end
-            end
-
-            if (actionComplete) begin
-                 inputDelay <= 0;
-            end
-       
-        end else begin // reset
-            inputDelay <= 0;
-            current_state <= 0;
-
-        end
-        
+  always @(posedge clk) begin // Movement Input FSM
+    if (~reset) begin
+        if (input_data[9:5] != 5'b00000) begin
+            input_buffer <= input_data;
+        end else if (input_data[4:0] != 5'b00000) begin
+        // reset input buffer when buttons are released
+        input_buffer <= 0;
+        action_complete <= 0;
+        direction_stored <= 0;
+      end
+      if (trigger) begin
+        // switch between states on trigger
+        current_state <= next_state;  // Update state
+      end
+    end else begin
+      input_buffer  <= 0;
+      current_state <= 0;
+      action_complete <= 0;
+      direction_stored <= 0;
     end
+  end
 
-    always @(posedge clk) begin  // animation FSM
+
+  always @(posedge clk) begin  // animation FSM
+
+    if (~reset) begin
+
+      if (trigger) begin
         
-        if (~reset) begin    
-
-             if (trigger) begin       
-                        
-                if (player_anim_counter == 20) begin
-                    player_anim_counter <= 0;
-                    player_sprite <= 4'b0011;
-                end else if (player_anim_counter == 7) begin
-                    player_sprite <= 4'b0010;
-                    player_anim_counter <= player_anim_counter +1;
-                end else begin
-                    player_anim_counter <= player_anim_counter +1;  
-                end
-            end
-
+        if (sword_visible == 4'b0001) begin
+          sword_duration <= sword_duration + 1;
         end else begin
-            player_anim_counter <= 0;
-
+          sword_duration <= 0;
         end
 
+        if (player_anim_counter == 20) begin
+          player_anim_counter <= 0;
+          player_sprite <= 4'b0011;
+        end else if (player_anim_counter == 7) begin
+          player_sprite <= 4'b0010;
+          player_anim_counter <= player_anim_counter + 1;
+        end else begin
+          player_anim_counter <= player_anim_counter + 1;
 
-
+        end
+      end end else begin  // reset attack
+        sword_duration <= 0;
+        player_anim_counter <= 0;
     end
+  end
 
-    always @(posedge clk) begin  // sword FSM 
-        
-        if (~reset) begin           
-            if (delayedTrigger) begin  
-                sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.   
-                if (sword_duration_flag != sword_duration_flag_local) begin
-                    sword_duration <= 0;
-                end else begin
-                    sword_duration <= sword_duration + 1;
-                end
+  always @(posedge clk) begin  // Player State FSM
+
+    if (~reset) begin
+
+      case (current_state)
+
+        IDLE_STATE: begin
+
+          sword_position <= 0;
+
+          case (input_buffer[9])
+            1: begin  // attack
+              if(~action_complete) begin
+                next_state <= ATTACK_STATE;
+              end
             end
-        end else begin
-            sword_duration <= 0;
+
+            0: begin  // no attack
+              // Can't access a switch to MOVE_STATE until action_complete is reset to 0
+              if (input_buffer[8:5] != 0 && ~action_complete) begin
+                next_state <= MOVE_STATE;
+              end
+            end
+
+
+            default: begin
+              next_state <= IDLE_STATE;  // Default case, stay in IDLE state
+            end
+          endcase
         end
-    end
 
-    always @(posedge clk) begin // Player State FSM - TODO: refactor to not be dependant on clk
+        MOVE_STATE: begin
+          // Can't move if action is already complete
+          if (~action_complete) begin
+            // Move player based on direction inputs and update orientation
+            // Check boundary for up movement
+            if (input_buffer[5] == 1 && player_pos[3:0] > 4'b0001) begin
+              player_pos <= player_pos - 1;  // Move up
+              player_direction <= 2'b00;
+              action_complete <= 1;
+            end
 
-        if(~reset)begin
-            case (current_state)
-                
-                IDLE_STATE: begin
-                    
-                    actionComplete <= 0;
-                    sword_position <= 0;
-                    sword_visible <= 4'b1111;
+            // Check boundary for down movement
+            if (input_buffer[6] == 1 && player_pos[3:0] < 4'b1011) begin
+              player_pos <= player_pos + 1;  // Move down
+              player_direction <= 2'b10;
+              action_complete <= 1;
+            end
 
-                    case (input_data[9]) 
-                        1 : begin // attack
-                            next_state <= ATTACK_STATE;
-                            sword_duration_flag <= sword_duration_flag + 1;
-                        end
+            // Check boundary for left movement
+            if (input_buffer[7] == 1 && player_pos[7:4] > 4'b0000) begin
+              player_pos <= player_pos - 16;  // Move left
+              player_orientation <= 2'b11;
+              player_direction <= 2'b11;
+              action_complete <= 1;
+            end
 
-                        0: begin // no attack
-                            if (input_data[8:5] != 0 ) // directional buttons - pressed
-                                next_state <= MOVE_STATE;  // Default case, stay in IDLE state
-                        end
-
-                        default: begin
-                            next_state <= IDLE_STATE;  // Default case, stay in IDLE state
-                        end
-                    endcase    
-      
-                end
-
-                MOVE_STATE: begin
-                    // Move player based on direction inputs and update orientation
-                    if (inputDelay[5] == 1 && player_pos[3:0] > 4'b0010) begin   // Check boundary for up movement
-                        player_pos <= player_pos - 1;  // Move up
-                        player_direction <= 2'b00;
-                    end
-
-                    if (inputDelay[6] == 1 && player_pos[3:0] < 4'b1011) begin  // Check boundary for down movement
-                        player_pos <= player_pos + 1;  // Move down
-                        player_direction <= 2'b10;
-                    end 
-
-                    if (inputDelay[7] == 1 && player_pos[7:4] > 4'b0000) begin  // Check boundary for left movement
-                        player_pos <= player_pos - 16;  // Move left
-                        player_orientation <= 2'b11;
-                        player_direction <= 2'b11;
-                    end
-
-                    if (inputDelay[8] == 1 && player_pos[7:4] < 4'b1111) begin  // Check boundary for right movement
-                        player_pos <= player_pos + 16;  // Move right
-                        player_orientation <= 2'b01;
-                        player_direction <= 2'b01;
-                    end
-                    
-                    actionComplete <= 1;
-                    next_state <= IDLE_STATE;   // Return to IDLE after moving
-
-                end
-
-                ATTACK_STATE: begin
-                    last_direction <= player_direction;
-
-                    // Check if the sword direction is specified by the player - why does it need to set both?
-                    if (input_data[5] == 1) begin   
-                        last_direction <= 2'b00;
-                        player_direction <= 2'b00;
-                    end
-
-                    if (input_data[6] == 1) begin  
-                        last_direction <= 2'b10;
-                        player_direction <= 2'b10;
-                    end 
-
-                    if (input_data[7] == 1) begin
-                        last_direction <= 2'b11;
-                        player_direction <= 2'b11;
-                    end
-
-                    if (input_data[8] == 1) begin
-                        last_direction <= 2'b01;
-                        player_direction <= 2'b01;
-                    end
-
-                    if (input_data[4] == 1) begin                    
-                        // Set sword orientation
-                        sword_orientation <= last_direction;
-
-                        // Set sword location
-                        if (last_direction == 2'b00 ) begin // player facing up
-                            sword_position <= player_pos - 1;
-                        end 
-
-                        if (last_direction == 2'b10 ) begin // player facing down
-                            sword_position <= player_pos + 1;
-                        end 
-
-                        if (last_direction == 2'b11) begin // player facing left
-                            sword_position <= player_pos - 16;
-                        end 
-
-                        if (last_direction == 2'b01) begin // player facing right
-                            sword_position <= player_pos + 16;
-                        end
-
-                        // Make sword visible
-                        sword_visible <= 4'b0001;
-                    end 
-
-                    if (sword_duration == ATTACK_DURATION) // Attack State duration
-                        next_state <= IDLE_STATE;  // Return to IDLE after attacking
-                end
-
-                default: begin
-                    next_state <= IDLE_STATE;  // Default case, stay in IDLE state
-                end
-            endcase
-        
-        end else begin
-
-            sword_duration_flag <= 0;
-            next_state <= 0;
-            player_pos <= 8'b0001_0011;
-            player_orientation <= 2'b01;
-            player_direction <= 2'b01;
+            // Check boundary for right movement
+            if (input_buffer[8] == 1 && player_pos[7:4] < 4'b1111) begin
+              player_pos <= player_pos + 16;  // Move right
+              player_orientation <= 2'b01;
+              player_direction <= 2'b01;
+              action_complete <= 1;
+            end
+          end else begin
+            next_state <= IDLE_STATE;  // Return to IDLE after moving
+          end
 
         end
+
+        ATTACK_STATE: begin
+          if(~action_complete && input_buffer[9]!=0) begin
+            // Check if the sword direction is specified by the player
+            if(input_buffer[8:5] != 0) begin
+              if (input_buffer[5] == 1) begin
+                last_direction   <= 2'b00;
+                player_direction <= 2'b00;
+                direction_stored <= 1;
+              end
+
+              if (input_buffer[6] == 1) begin
+                last_direction   <= 2'b10;
+                player_direction <= 2'b10;
+                direction_stored <= 1;
+              end
+
+              if (input_buffer[7] == 1) begin
+                last_direction   <= 2'b11;
+                player_direction <= 2'b11;
+                direction_stored <= 1;
+              end
+
+              if (input_buffer[8] == 1) begin
+                last_direction   <= 2'b01;
+                player_direction <= 2'b01;
+                direction_stored <= 1;
+              end
+            end
+            // if not, use the last direction
+            else begin
+              last_direction <= player_direction;
+              direction_stored <= 1;
+            end
+          end
+
+          if (direction_stored) begin
+            // Set sword orientation
+            sword_orientation <= last_direction;
+
+            // Set sword location
+            if (last_direction == 2'b00) begin  // player facing up
+              sword_position <= player_pos - 1;
+            end
+
+            if (last_direction == 2'b10) begin  // player facing down
+              sword_position <= player_pos + 1;
+            end
+
+            if (last_direction == 2'b11) begin  // player facing left
+              sword_position <= player_pos - 16;
+            end
+
+            if (last_direction == 2'b01) begin  // player facing right
+              sword_position <= player_pos + 16;
+            end
+
+            sword_visible <= 4'b0001; // Make sword visible
+            // reset
+            action_complete <= 1; // Set action complete flag
+            direction_stored <= 0; // reset direction_stored flag
+          end
+
+          if (sword_duration == ATTACK_DURATION) begin // Attack State duration
+            sword_visible  <= 4'b1111; // Make sword invisible
+            next_state <= IDLE_STATE;  // Return to IDLE after attacking
+          end
+        end
+
+
+        default: begin
+          next_state <= IDLE_STATE;  // Default case, stay in IDLE state
+        end
+      endcase
+
+    end else begin
+      next_state <= 0;
+      player_pos <= 8'b0001_0011;
+      player_orientation <= 2'b01;
+      player_direction <= 2'b01;
     end
+  end
 
 endmodule
