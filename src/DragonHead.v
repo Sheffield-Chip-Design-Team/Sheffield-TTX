@@ -43,7 +43,7 @@ module DragonHead (
             
             if(pre_vsync != vsync && pre_vsync == 0) begin
                 
-                if (movement_counter < 6'd10) begin
+                if (movement_counter < 6'd12) begin
                     movement_counter <= movement_counter + 1;
                 
                 end else begin
@@ -80,11 +80,12 @@ module DragonHead (
 
                         // Update the next location
                         dragon_pos <= {dragon_x, dragon_y};
-                    end else begin
-                        // stop moving when the dragon is adjacent to the player 
-                        dragon_x <= dragon_x; 
-                        dragon_y <= dragon_y; 
-                    end
+                      
+                       end else begin
+                            // stop moving when the dragon is adjacent to the player 
+                            dragon_x <= dragon_x; 
+                            dragon_y <= dragon_y; 
+                        end
                 end
             end 
 
