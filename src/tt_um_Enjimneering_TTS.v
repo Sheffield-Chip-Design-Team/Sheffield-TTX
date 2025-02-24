@@ -47,7 +47,6 @@ module tt_um_Enjimneering_top (
 
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
-    wire PlayerDragonCollision;
 
     InputController ic(  // change these mappings to change the controls in the simulator
         .clk(clk),
@@ -59,13 +58,18 @@ module tt_um_Enjimneering_top (
         .attack(ui_in[4]),
         .control_state(input_data)
     );
+    wire PlayerDragonCollision;
+    wire SwordDragonCollision;
+    wire SheepDragonCollision;
     
+
      CollisionDetector collisionDetector (
         .clk(clk),
         .reset(vsync),
         .playerPos(player_pos),
-        .swordPos(swordPos),
+        .swordPos(sword_position),
         .sheepPos(sheep_pos),
+        .activeDragonSegments(VisibleSegments),
         .dragonSegmentPositions(
             {Dragon_1[7:0],
             Dragon_2[7:0],
@@ -80,7 +84,7 @@ module tt_um_Enjimneering_top (
     );
 
     //player logic
-    wire [1:0] playerLives;
+    reg [1:0] playerLives = 3;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -159,7 +163,7 @@ module tt_um_Enjimneering_top (
         .clk(ui_in[7]), 
         .reset(~rst_n),
         .read_enable(1), 
-        .dragon_pos(dragon_pos), 
+        .dragon_pos(dragon_position), 
         .player_pos(player_pos),
         .sheep_pos(sheep_pos),
         .sheep_sprite(sheep_sprite)

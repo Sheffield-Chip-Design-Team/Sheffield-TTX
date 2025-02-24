@@ -62,7 +62,7 @@ module PlayerLogic (
             
             if (~reset) begin    
                 current_state <= next_state; // Update state
-                
+
             end else begin // reset to idle
                 current_state <= 0;
         end
@@ -72,7 +72,6 @@ module PlayerLogic (
     always @(posedge trigger) begin  // animation FSM
        
         if (~reset) begin           
-
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
                     player_sprite <= 4'b0011;
@@ -82,7 +81,6 @@ module PlayerLogic (
                 end else begin
                     player_anim_counter <= player_anim_counter +1;  
                 end
-
         end 
     end
 
@@ -100,8 +98,10 @@ module PlayerLogic (
             end
 
         end else begin // reset attack
-                player_sprite <= 4'b0011;
-                player_anim_counter <= 0;
+                if (~trigger) begin
+                    player_sprite <= 4'b0011;
+                    player_anim_counter <= 0;
+                end
             end
 
     end 
@@ -157,8 +157,9 @@ module PlayerLogic (
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
                     end
-
-                    inputDelay <= 0;            // clear the register to prevent repeat moves
+                    if (~trigger) begin // removing multidriven signal?
+                        inputDelay <= 0;            // clear the register to prevent repeat moves
+                    end
                     next_state <= IDLE_STATE;   // Return to IDLE after moving
 
                 end
