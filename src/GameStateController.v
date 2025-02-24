@@ -15,7 +15,7 @@ module CollisionDetector (
     output reg        swordDragonCollision,
     output reg        sheepDragonCollision
 );
-
+    
     reg       checksegment;
     reg [2:0] segmentCounter = 0;
     reg [7:0] dragonSegment;
@@ -49,7 +49,7 @@ module CollisionDetector (
         if (!reset) begin
             
             //check that current dragon segement is active
-            checksegment <= ((8'b0000_0001 << segmentCounter) & activeDragonSegments[segmentCounter]) != 0;
+            checksegment <= ((8'b0000_0001 << segmentCounter) & activeDragonSegments) != 0;
 
             playerDragonCollision <= playerDragonCollision | PlayerDragonCollisionFlag;
             swordDragonCollision  <= swordDragonCollision  | SwordDragonCollisionFlag;

@@ -30,7 +30,6 @@ module sheepLogic (
 
     always @(posedge clk) begin
         if (~reset) begin
-        
             if (read_enable) begin
                 sheep_sprite <= 1; 
                 // Generate a valid position
@@ -44,8 +43,7 @@ module sheepLogic (
                     sheep_pos[3:0] <= random_value[3:0];
                 end
             end
-        
-        end else begin
+        end else begin // reset signal
             // Reset condition: sheep is not visible and position off-screen
             sheep_sprite <= 0;
             // sheep_pos <= 8'b0; // Initialize to 0 during reset
@@ -83,22 +81,20 @@ module sheepLogic (
 
     reg [2:0] counter;
 
-    always @(posedge clk or posedge reset) begin
-        
-        if (reset) begin // for when we need a new random immediately
-            rdm_num <= seed;  // Initialize value using the trigger
-            counter <= 7;     // Reset counter
-        
-        end else if (counter > 0) begin
-            // Shift and apply feedback for randomness
-            rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
-            rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
-            counter <= counter - 1;        // Decrement counter
+    always @(posedge clk) begin
+        if (~reset) begin 
+            if (counter > 0) begin
+                // Shift and apply feedback for randomness
+                rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
+                rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
+                counter <= counter - 1;        // Decrement counter
+            end
 
-        end else begin
+        end else begin // reset behaviour
             counter <= 7;  // Reset counter for next random number
-            rdm_num <= seed;
+            rdm_num <= seed;     
         end
+            
     end
 
 endmodule

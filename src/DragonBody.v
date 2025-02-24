@@ -35,15 +35,11 @@ module DragonBody(
     localparam HEAL = 2'b01; // grow
     localparam HIT = 2'b10;  // shrink
 
-
    // reg pre_vsync; - signal unused
 
     always @(posedge clk) begin
-    
-    if (vsync) begin
-
-        if (~reset) begin
-                
+        if (vsync) begin
+            if (~reset) begin 
                 if (movementCounter == 6'd10) begin
                     Dragon_1 <= Dragon_Head;
                     Dragon_2 <= Dragon_1;
@@ -52,9 +48,7 @@ module DragonBody(
                     Dragon_5 <= Dragon_4;
                     Dragon_6 <= Dragon_5;
                     Dragon_7 <= Dragon_6;
-                end
-
-                end else begin
+                end end else begin // reset
                     Dragon_1 <= 0;
                     Dragon_2 <= 0;
                     Dragon_3 <= 0;
@@ -62,13 +56,11 @@ module DragonBody(
                     Dragon_5 <= 0;
                     Dragon_6 <= 0;
                     Dragon_7 <= 0;
-                end
-    end
-
+            end
+        end
     end
 
     always @( posedge clk )begin
-        
         if(~reset) begin
             case(lengthUpdate) 
                 MOVE: begin
@@ -84,7 +76,7 @@ module DragonBody(
                     Display_en <= Display_en;
                 end
             endcase
-        end else begin
+        end else begin // reset
             Display_en <= 0;
         end
     end
