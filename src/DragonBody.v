@@ -36,9 +36,9 @@ module DragonBody(
     localparam HIT = 2'b10;  // shrink
 
 
-    reg pre_vsync;
+   // reg pre_vsync; - signal unused
 
-    always @(posedge vsync)begin
+    always @(posedge vsync) begin
         
     if (~reset) begin
             
