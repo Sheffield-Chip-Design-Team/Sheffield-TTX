@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-19 10:06:56.136197 
+// BUILD TIME: 2025-02-24 22:34:09.418491 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -28,19 +28,16 @@ module tt_um_vga_example (
     //system signals
     wire NES_Clk;
     wire NES_Latch;
-    wire NES_Data;
+    wire NES_Data = 0;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
 
     /*
-        NES RECIEVER MODULE
-
-
+        NES/SNES RECIEVER MODULE
     */
 
     // input signals
     wire [9:0] input_data; // register to hold the 5 possible player actions
-    wire COLLISION;
 
     InputController ic(  // change these mappings to change the controls in the simulator
         .clk(clk),
@@ -52,11 +49,18 @@ module tt_um_vga_example (
         .attack(ui_in[4]),
         .control_state(input_data)
     );
+    wire PlayerDragonCollision;
+    wire SwordDragonCollision;
+    wire SheepDragonCollision;
+    
 
-     GameStateControlUnit gamecontroller(
+     CollisionDetector collisionDetector (
         .clk(clk),
         .reset(vsync),
         .playerPos(player_pos),
+        .swordPos(sword_position),
+        .sheepPos(sheep_pos),
+        .activeDragonSegments(VisibleSegments),
         .dragonSegmentPositions(
             {Dragon_1[7:0],
             Dragon_2[7:0],
@@ -65,12 +69,13 @@ module tt_um_vga_example (
             Dragon_5[7:0],
             Dragon_6[7:0],
             Dragon_7[7:0]} ),
-        .collisionCollector(COLLISION)
+        .playerDragonCollision(PlayerDragonCollision),
+        .swordDragonCollision(SwordDragonCollision),
+        .sheepDragonCollision(SheepDragonCollision)
     );
 
     //player logic
-
-    wire [1:0] playerLives;
+    reg [1:0] playerLives = 3;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
@@ -97,8 +102,7 @@ module tt_um_vga_example (
         .sword_orientation(sword_orientation)
     );
 
-
-    //dragon logic 
+    // dragon logic 
     wire [1:0] dragon_direction;
     wire [7:0] dragon_position;
     wire [5:0] movement_delay_counter;
@@ -141,19 +145,19 @@ module tt_um_vga_example (
 
         .Display_en(VisibleSegments)
     );
-// sheep logic
+
+    // sheep logic
     wire [7:0] sheep_pos; // 8-bit position (4 bits for X, 4 bits for Y)
     wire [3:0] sheep_sprite;
 
     sheepLogic sheep (
-    .clk(ui_in[7]), 
-    .reset(~rst_n),
-    .read_enable(1), 
-    .dragon_pos(dragon_pos), 
-    .player_pos(player_pos),
-    .sheep_pos(sheep_pos),
-    .sheep_visible()
-
+        .clk(ui_in[7]), 
+        .reset(~rst_n),
+        .read_enable(1), 
+        .dragon_pos(dragon_position), 
+        .player_pos(player_pos),
+        .sheep_pos(sheep_pos),
+        .sheep_sprite(sheep_sprite)
     );
 
     // Picture Processing Unit
@@ -191,8 +195,7 @@ module tt_um_vga_example (
         .colour         (pixel_value)
     );
 
-
-   // display sync signals
+    // display sync signals
     wire hsync;
     wire vsync;
     wire video_active;
@@ -201,7 +204,7 @@ module tt_um_vga_example (
 
     // timing signals
     wire frame_end;
-
+    wire enable_input;
     // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -212,7 +215,7 @@ module tt_um_vga_example (
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
         .frame_end(frame_end),
-        .input_enable()
+        .input_enable(enable_input)
     );
 
     // outpout colour signals
@@ -232,18 +235,17 @@ module tt_um_vga_example (
         end else begin
             if (video_active) begin // display output color from Frame controller unit
 
-                if (COLLISION == 0) begin // no collisions
+                if (PlayerDragonCollision == 0) begin // no collision - green
                     R <= pixel_value ? 2'b11 : 0;
                     G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (COLLISION == 1) begin // no collision
+                if (PlayerDragonCollision == 1) begin // collision - red
                     R <= pixel_value ? 2'b11 : 2'b11;
                     G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
                 end
-
 
             end else begin
                 R <= 0;
@@ -253,7 +255,6 @@ module tt_um_vga_example (
         end
     end
 
- 
     // System IO Connections
     assign uio_oe  = 8'b0000_0011;
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
@@ -261,7 +262,14 @@ module tt_um_vga_example (
     
     // housekeeping to prevent errors/ warnings in synthesis.
     assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in}; 
+    wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
+    NES_Data, 
+    SwordDragonCollision, 
+    SheepDragonCollision, 
+    player_direction, 
+    sheep_sprite, 
+    enable_input, 
+    Dragon_7[9:8]}; 
 
 endmodule
 
@@ -341,78 +349,118 @@ module InputController (
 endmodule
 
 //================================================
-// Game control Unit
+// Collision Detection Unit 
+// Author: James Ashie Kotey
+
 // Last Updated: 31/01/2025 @ 16:23:52
 
-module GameStateControlUnit (
+module CollisionDetector (
     input wire        clk,
     input wire        reset,
     input wire [7:0]  playerPos,
+    input wire [7:0]  swordPos,
+    input wire [7:0]  sheepPos,
     input wire [55:0] dragonSegmentPositions,
     input wire [6:0]  activeDragonSegments,
-    output wire       playerDragonCollisionFlag,
-    output reg        collisionCollector
-
+    output reg        playerDragonCollision,
+    output reg        swordDragonCollision,
+    output reg        sheepDragonCollision
 );
 
-    reg [2:0] stateReg = 0;
-    reg [7:0] currentSegment;
     reg       checksegment;
-    
-    // make comparison to determine if there is a collision.
+    reg [2:0] segmentCounter = 0;
+    reg [7:0] dragonSegment;
 
-    Comparator collisionDetector(
-    .inA(playerPos),
-    .inB(currentSegment),
-    .out(playerDragonCollisionFlag)
+    wire PlayerDragonCollisionFlag;
+    wire SwordDragonCollisionFlag;
+    wire SheepDragonCollisionFlag;
+    
+    // make comparison with current dragon segment to determine if there is a collision.
+
+    Comparator dragonPlayer(
+        .inA(playerPos),
+        .inB(dragonSegment),
+        .out(PlayerDragonCollisionFlag)
+    );
+
+    Comparator dragonSword(
+        .inA(swordPos),
+        .inB(dragonSegment),
+        .out(SwordDragonCollisionFlag)
+    );
+
+    Comparator dragonSheep(
+        .inA(sheepPos),
+        .inB(dragonSegment),
+        .out(SheepDragonCollisionFlag)
     );
 
     always@(posedge clk) begin
 
         if (!reset) begin
             
-            checksegment <= (stateReg & activeDragonSegments[stateReg]);
-            collisionCollector <= collisionCollector | playerDragonCollisionFlag;
+            //check that current dragon segement is active
+            checksegment <= ((7'b000_0001 << segmentCounter) & activeDragonSegments) != 0;
 
-            case(stateReg)
-                0: begin    // read from the first dragon segment
-                    currentSegment <= dragonSegmentPositions[7:0];
-                    stateReg = stateReg + 1;
-                end
+            playerDragonCollision <= playerDragonCollision | PlayerDragonCollisionFlag;
+            swordDragonCollision  <= swordDragonCollision  | SwordDragonCollisionFlag;
+            sheepDragonCollision  <= sheepDragonCollision  | SheepDragonCollisionFlag;
 
-                1: begin
-                    currentSegment <= dragonSegmentPositions[15:8];
-                    stateReg = stateReg + 1;
-                end
+            case(segmentCounter) // check against each active dragon segment.
+                    
+                    0: begin
+                        if (checksegment) begin   // read from the first dragon segment
+                            dragonSegment <= dragonSegmentPositions[7:0];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                2: begin
-                    currentSegment <= dragonSegmentPositions[23:16];
-                    stateReg = stateReg + 1;
-                end
+                    1: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[15:8];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                3: begin
-                    currentSegment <= dragonSegmentPositions[31:24];
-                    stateReg = stateReg + 1;
-                end
+                    2: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[23:16];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                4: begin
-                    currentSegment <= dragonSegmentPositions[39:32];
-                    stateReg = stateReg + 1;
-                end
+                    3: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[31:24];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                5: begin
-                    currentSegment <= dragonSegmentPositions[47:40];
-                    stateReg = stateReg + 1;
-                end
+                    4: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[39:32];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
 
-                6: begin
-                    currentSegment <= dragonSegmentPositions[55:48];
-                end
+                    5: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[47:40];
+                        end segmentCounter <= segmentCounter + 1;
+                    end
+
+                    6: begin
+                        if (checksegment) begin 
+                            dragonSegment <= dragonSegmentPositions[55:48];
+                        end // don't increment segment.
+                    end
+
+                    default: begin
+                            dragonSegment <= 8'b1111_1111; // out of bounds
+                    end
 
             endcase
 
-        end else begin
-             stateReg = 0;
+        end else begin              // reset any collision data after each frame.
+             segmentCounter <= 0;
+             playerDragonCollision <= 0;
+             swordDragonCollision <= 0;
+             sheepDragonCollision <= 0;
         end
 
     end
@@ -429,7 +477,6 @@ module Comparator (
 
 endmodule
 //================================================
-
 // Module: Player Logic
 
 /*
@@ -461,7 +508,7 @@ module PlayerLogic (
     localparam IDLE_STATE   = 2'b00;  // Move when there is input from the controller
     localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
     localparam MOVE_STATE   = 2'b10;  // Wait for input and stay idle
-    localparam ATTACK_DURATION = 3'b101;
+    localparam ATTACK_DURATION = 6'b000_101;
 
     reg [5:0] player_anim_counter;
     reg [5:0] sword_duration; // how long the sword stays visible - (SET BY ATTACK DURATION)
@@ -479,26 +526,44 @@ module PlayerLogic (
     //Delay registers - to fix tiiming issues when using all posedge
     reg delayedTrigger;
     reg [9:0] inputDelay;
+    reg actionComplete;
 
-
-    always @(posedge clk )begin // transition control fsm
-        delayedTrigger <= trigger;
-    end
-
-    always @(posedge trigger) begin // store input in delay reg
-           inputDelay <= input_data;
-    end
-
-    always @(posedge delayedTrigger) begin
-            current_state <= next_state; // Update state
-    end
-
-
+    // made everythin dependant on clk
     
-    always @(posedge trigger) begin  // animation FSM
+    always @(posedge clk )begin // transition control fsm
+        
+        delayedTrigger <= trigger;
 
-        if (~reset) begin           
+        if (~reset) begin
 
+            if (trigger) begin
+                inputDelay <= input_data;
+            end
+
+            if (delayedTrigger) begin
+                if (~reset) begin    
+                    current_state <= next_state; // Update state
+                end
+            end
+
+            if (actionComplete) begin
+                 inputDelay <= 0;
+            end
+       
+        end else begin // reset
+            inputDelay <= 0;
+            current_state <= 0;
+
+        end
+        
+    end
+
+    always @(posedge clk) begin  // animation FSM
+        
+        if (~reset) begin    
+
+             if (trigger) begin       
+                        
                 if (player_anim_counter == 20) begin
                     player_anim_counter <= 0;
                     player_sprite <= 4'b0011;
@@ -508,16 +573,20 @@ module PlayerLogic (
                 end else begin
                     player_anim_counter <= player_anim_counter +1;  
                 end
+            end
 
-        end else begin // reset to idle
-            current_state <= 0;
+        end else begin
+            player_anim_counter <= 0;
+
         end
+
+
+
     end
 
-    always @(posedge clk) begin  // sword FSM - TODO: refactor to not be dependant on clk
-
+    always @(posedge clk) begin  // sword FSM 
+        
         if (~reset) begin           
-
             if (delayedTrigger) begin  
                 sword_duration_flag_local <= sword_duration_flag; //九曲十八弯，prevents multiple driver issues.   
                 if (sword_duration_flag != sword_duration_flag_local) begin
@@ -526,13 +595,10 @@ module PlayerLogic (
                     sword_duration <= sword_duration + 1;
                 end
             end
-
-        end else begin // reset attack
-                player_sprite <= 4'b0011;
-                player_anim_counter <= 0;
-            end
-
-    end 
+        end else begin
+            sword_duration <= 0;
+        end
+    end
 
     always @(posedge clk) begin // Player State FSM - TODO: refactor to not be dependant on clk
 
@@ -541,6 +607,7 @@ module PlayerLogic (
                 
                 IDLE_STATE: begin
                     
+                    actionComplete <= 0;
                     sword_position <= 0;
                     sword_visible <= 4'b1111;
 
@@ -585,8 +652,8 @@ module PlayerLogic (
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
                     end
-
-                    inputDelay <= 0;            // clear the register to prevent repeat moves
+                    
+                    actionComplete <= 1;
                     next_state <= IDLE_STATE;   // Return to IDLE after moving
 
                 end
@@ -675,12 +742,10 @@ endmodule
 */
 
 module DragonHead (  
-
-    input clk,
+    input clk, 
+    input vsync,
     input reset,
     input [7:0] targetPos,
-  
-    input vsync,
 
     output reg [1:0] dragon_direction,
     output reg [7:0] dragon_pos,
@@ -695,68 +760,72 @@ module DragonHead (
     reg [3:0] sx; //figuring out direction in axis
     reg [3:0] sy;
 
-    reg pre_vsync;
+    // reg pre_vsync; - signal not driven or used
 
     // Movement logic, uses bresenhams line algorithm
 
-    always @(posedge vsync) begin
+    always @(posedge clk) begin
         
-        if (~reset)begin
+        if (vsync) begin
+
+            if (~reset)begin
+                    
+                if (movement_counter < 6'd10) begin
+                    movement_counter <= movement_counter + 1;
                 
-            if (movement_counter < 6'd10) begin
-                movement_counter <= movement_counter + 1;
-            
-            end else begin
-                movement_counter <= 0;
-                // Store the current position before updating , used later
-                dragon_x <= dragon_pos[7:4];
-                dragon_y <= dragon_pos[3:0];
-
-                // Calculate the differences between dragon and player
-                dx <= targetPos[7:4] - dragon_x;
-                dy <= targetPos[3:0] - dragon_y ;
-                sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
-                sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
-
-                // Move the dragon towards the target if it's not adjacent
-                if (dx >= 1 || dy >= 1) begin
-                // Update dragon position only if it actually moves , keeps flickering
-                    if (dx >= dy) begin //prioritize movement
-                        dragon_x <= dragon_x + sx;
-                        dragon_y <= dragon_y;
-                    end else begin
-                        dragon_x <= dragon_x;
-                        dragon_y <= dragon_y + sy;
-                    end
-
-                    if (dragon_x > dragon_pos[7:4])
-                    dragon_direction <= 2'b01;   // Move right
-                    else if (dragon_x < dragon_pos[7:4])
-                    dragon_direction <= 2'b11;   // Move left
-                    else if (dragon_y > dragon_pos[3:0])
-                    dragon_direction <= 2'b10;   // Move down
-                    else if (dragon_y < dragon_pos[3:0])
-                    dragon_direction <= 2'b00;   // Move up
-
-                    // Update the next location
-                    dragon_pos <= {dragon_x, dragon_y};
                 end else begin
-                    // stop moving when the dragon is adjacent to the player 
-                    dragon_x <= dragon_x; 
-                    dragon_y <= dragon_y; 
+                    movement_counter <= 0;
+                    // Store the current position before updating , used later
+                    dragon_x <= dragon_pos[7:4];
+                    dragon_y <= dragon_pos[3:0];
+
+                    // Calculate the differences between dragon and player
+                    dx <= targetPos[7:4] - dragon_x;
+                    dy <= targetPos[3:0] - dragon_y ;
+                    sx <= (dragon_x < targetPos[7:4]) ? 1 : -1; // Direction in axis
+                    sy <= (dragon_y < targetPos[3:0]) ? 1 : -1; 
+
+                    // Move the dragon towards the target if it's not adjacent
+                    if (dx >= 1 || dy >= 1) begin
+                    // Update dragon position only if it actually moves , keeps flickering
+                        if (dx >= dy) begin //prioritize movement
+                            dragon_x <= dragon_x + sx;
+                            dragon_y <= dragon_y;
+                        end else begin
+                            dragon_x <= dragon_x;
+                            dragon_y <= dragon_y + sy;
+                        end
+
+                        if (dragon_x > dragon_pos[7:4])
+                        dragon_direction <= 2'b01;   // Move right
+                        else if (dragon_x < dragon_pos[7:4])
+                        dragon_direction <= 2'b11;   // Move left
+                        else if (dragon_y > dragon_pos[3:0])
+                        dragon_direction <= 2'b10;   // Move down
+                        else if (dragon_y < dragon_pos[3:0])
+                        dragon_direction <= 2'b00;   // Move up
+
+                        // Update the next location
+                        dragon_pos <= {dragon_x, dragon_y};
+                        
+                    end else begin
+                        // stop moving when the dragon is adjacent to the player 
+                        dragon_x <= dragon_x; 
+                        dragon_y <= dragon_y; 
+                    end
                 end
+
+
+            end else begin
+                dragon_x <= 0;
+                dragon_y <= 0;
+                movement_counter <= 0;
+                dragon_pos <= 0;
+                dx <= 0; 
+                dy <= 0;
+                sx <= 0; 
+                sy <= 0;
             end
-
-
-        end else begin
-            dragon_x <= 0;
-            dragon_y <= 0;
-            movement_counter <= 0;
-            dragon_pos <= 0;
-            dx <= 0; 
-            dy <= 0;
-            sx <= 0; 
-            sy <= 0;
         end
     end
 
@@ -799,43 +868,39 @@ module DragonBody(
     localparam HEAL = 2'b01; // grow
     localparam HIT = 2'b10;  // shrink
 
+   // reg pre_vsync; - signal unused
 
-    reg pre_vsync;
-
-    always @(posedge vsync)begin
-        
-    if (~reset) begin
-            
-            if (movementCounter == 6'd10) begin
-                Dragon_1 <= Dragon_Head;
-                Dragon_2 <= Dragon_1;
-                Dragon_3 <= Dragon_2;
-                Dragon_4 <= Dragon_3;
-                Dragon_5 <= Dragon_4;
-                Dragon_6 <= Dragon_5;
-                Dragon_7 <= Dragon_6;
+    always @(posedge clk) begin
+        if (vsync) begin
+            if (~reset) begin 
+                if (movementCounter == 6'd10) begin
+                    Dragon_1 <= Dragon_Head;
+                    Dragon_2 <= Dragon_1;
+                    Dragon_3 <= Dragon_2;
+                    Dragon_4 <= Dragon_3;
+                    Dragon_5 <= Dragon_4;
+                    Dragon_6 <= Dragon_5;
+                    Dragon_7 <= Dragon_6;
+                end end else begin // reset
+                    Dragon_1 <= 0;
+                    Dragon_2 <= 0;
+                    Dragon_3 <= 0;
+                    Dragon_4 <= 0;
+                    Dragon_5 <= 0;
+                    Dragon_6 <= 0;
+                    Dragon_7 <= 0;
             end
-
-    end end else begin
-        Dragon_1 <= 0;
-        Dragon_2 <= 0;
-        Dragon_3 <= 0;
-        Dragon_4 <= 0;
-        Dragon_5 <= 0;
-        Dragon_6 <= 0;
-        Dragon_7 <= 0;
+        end
     end
 
-
     always @( posedge clk )begin
-        
         if(~reset) begin
             case(lengthUpdate) 
                 MOVE: begin
                     Display_en <= Display_en;
                 end
                 HEAL: begin
-                    Display_en <= (Display_en << 1) | 1'b1;
+                    Display_en <= (Display_en << 1) | 7'b0000001;
                 end
                 HIT: begin
                     Display_en <= Display_en >> 1;
@@ -844,7 +909,7 @@ module DragonBody(
                     Display_en <= Display_en;
                 end
             endcase
-        end else begin
+        end else begin // reset
             Display_en <= 0;
         end
     end
@@ -864,12 +929,11 @@ module DragonBody(
 module sheepLogic (
     input clk,
     input reset,
-    input trigger,
     input wire read_enable, // When high, generate random position for the sheep
     input wire [7:0] dragon_pos, // using as seed value to ensure no overlap
     input wire [7:0] player_pos, // using as seed value to ensure no overlap
     output reg [7:0] sheep_pos, // 8-bit position (4 bits for X, 4 bits for Y)
-    output reg [3:0] sheep_visible
+    output reg [3:0] sheep_sprite
 );
 
     wire [7:0] random_value; // 8-bit random value: first 4 bits -> X, last 4 bits -> Y
@@ -884,24 +948,24 @@ module sheepLogic (
     );
 
     always @(posedge clk) begin
-        if (reset) begin
-            // Reset condition: sheep is not visible and position off-screen
-            sheep_visible <= 0;
-            // sheep_pos <= 8'b0; // Initialize to 0 during reset
-        end else if (read_enable) begin
-            // Sheep becomes visible
-            sheep_visible <= 1; 
-            // Generate a valid position
-            // add masks to enforce limit
-            sheep_pos[7:4] <= random_value[7:4]; 
-            
-            // enforce limit 
-            if (random_value[3:0] > 11) begin // can probably be minimised
-                sheep_pos[3:0] <= ~random_value[3:0];
-            end else begin
-                sheep_pos[3:0] <= random_value[3:0];
-            end
+        if (~reset) begin
+            if (read_enable) begin
+                sheep_sprite <= 1; 
+                // Generate a valid position
+                // add masks to enforce limit
+                sheep_pos[7:4] <= random_value[7:4];
 
+                // enforce limit 
+                if (random_value[3:0] > 11) begin // can probably be minimised
+                    sheep_pos[3:0] <= ~random_value[3:0];
+                end else begin
+                    sheep_pos[3:0] <= random_value[3:0];
+                end
+            end
+        end else begin // reset signal
+            // Reset condition: sheep is not visible and position off-screen
+            sheep_sprite <= 0;
+            // sheep_pos <= 8'b0; // Initialize to 0 during reset
         end
     end
     /*
@@ -936,22 +1000,20 @@ module sheepLogic (
 
     reg [2:0] counter;
 
-    always @(posedge clk or posedge reset) begin
-        
-        if (reset) begin // for when we need a new random immediately
-            rdm_num <= seed;  // Initialize value using the trigger
-            counter <= 7;     // Reset counter
-        
-        end else if (counter > 0) begin
-            // Shift and apply feedback for randomness
-            rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
-            rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
-            counter <= counter - 1;        // Decrement counter
+    always @(posedge clk) begin
+        if (~reset) begin 
+            if (counter > 0) begin
+                // Shift and apply feedback for randomness
+                rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
+                rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
+                counter <= counter - 1;        // Decrement counter
+            end
 
-        end else begin
+        end else begin // reset behaviour
             counter <= 7;  // Reset counter for next random number
-            rdm_num <= seed;
+            rdm_num <= seed;     
         end
+            
     end
 
 endmodule
@@ -1094,7 +1156,6 @@ module PictureProcessingUnit(
     input wire [17:0] dragon_4,
     input wire [17:0] dragon_5,
     input wire [17:0] dragon_6,
-    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -1275,9 +1336,6 @@ module PictureProcessingUnit(
                 4'd13: begin
                     general_Entity <= dragon_6;
                 end
-                4'd14: begin
-                    general_Entity <= dragon_7;
-                end
 
                 default: begin
                     general_Entity <= 18'b111111000000000000;
@@ -1309,7 +1367,7 @@ module PictureProcessingUnit(
 
     // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
     assign range_H = (general_Entity[11:8] - local_Counter_H) < {1'b0,general_Entity[2:0]}; 
-    assign range_V = (local_Counter_V - general_Entity[7:4]) == 1'b0;
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 4'b0000;
     assign inRange = range_H && range_V;
 
 
