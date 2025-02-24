@@ -1,7 +1,8 @@
 // Game control Unit
+// Author: James Ashie Kotey
 // Last Updated: 31/01/2025 @ 16:23:52
 
-module GameStateControlUnit (
+module CollisionDetector (
     input wire        clk,
     input wire        reset,
     input wire [7:0]  playerPos,
@@ -47,7 +48,7 @@ module GameStateControlUnit (
         if (!reset) begin
             
             //check that current dragon segement is active
-            checksegment <= ((8'b0000_0001 << segmentCounter) & (activeDragonSegments[segmentCounter]) != 0);
+            checksegment <= ((8'b0000_0001 << segmentCounter) & (activeDragonSegments[segmentCounter])) != 0;
 
             playerDragonCollision <= playerDragonCollision | PlayerDragonCollisionFlag;
             swordDragonCollision  <= swordDragonCollision  | SwordDragonCollisionFlag;
