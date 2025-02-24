@@ -29,24 +29,26 @@ module sheepLogic (
     );
 
     always @(posedge clk) begin
-        if (reset) begin
+        if (~reset) begin
+        
+            if (read_enable) begin
+                sheep_sprite <= 1; 
+                // Generate a valid position
+                // add masks to enforce limit
+                sheep_pos[7:4] <= random_value[7:4];
+
+                // enforce limit 
+                if (random_value[3:0] > 11) begin // can probably be minimised
+                    sheep_pos[3:0] <= ~random_value[3:0];
+                end else begin
+                    sheep_pos[3:0] <= random_value[3:0];
+                end
+            end
+        
+        end else begin
             // Reset condition: sheep is not visible and position off-screen
             sheep_sprite <= 0;
             // sheep_pos <= 8'b0; // Initialize to 0 during reset
-        end else if (read_enable) begin
-            // Sheep becomes visible
-            sheep_sprite <= 1; 
-            // Generate a valid position
-            // add masks to enforce limit
-            sheep_pos[7:4] <= random_value[7:4]; 
-
-            // enforce limit 
-            if (random_value[3:0] > 11) begin // can probably be minimised
-                sheep_pos[3:0] <= ~random_value[3:0];
-            end else begin
-                sheep_pos[3:0] <= random_value[3:0];
-            end
-
         end
     end
     /*

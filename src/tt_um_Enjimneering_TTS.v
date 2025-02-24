@@ -213,7 +213,7 @@ module tt_um_Enjimneering_top (
 
     // timing signals
     wire frame_end;
-
+    wire enable_input;
     // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -224,7 +224,7 @@ module tt_um_Enjimneering_top (
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
         .frame_end(frame_end),
-        .input_enable()
+        .input_enable(enable_input)
     );
 
     // outpout colour signals
