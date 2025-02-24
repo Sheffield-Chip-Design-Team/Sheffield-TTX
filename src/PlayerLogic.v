@@ -49,7 +49,8 @@ module PlayerLogic (
     reg delayedTrigger;
     reg [9:0] inputDelay;
 
-
+    // made everythin dependant on clk
+    
     always @(posedge clk )begin // transition control fsm
         
         delayedTrigger <= trigger;
