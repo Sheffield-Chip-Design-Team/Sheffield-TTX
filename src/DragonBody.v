@@ -8,6 +8,19 @@
             
 */
 
+// Module : Dragon Body
+// Author: Bowen Shi
+
+// Changes
+// renamed ports
+//  OrenPositrion -> Dragon_Head
+//  State
+/* 
+    Description:
+    The Dragon body segment 
+            
+*/
+
 module DragonBody(
 
     input clk,
@@ -35,11 +48,17 @@ module DragonBody(
     localparam HEAL = 2'b01; // grow
     localparam HIT = 2'b10;  // shrink
 
-   // reg pre_vsync; - signal unused
 
-    always @(posedge clk) begin
-        if (vsync) begin
-            if (~reset) begin 
+    reg pre_vsync;
+
+    always @(posedge clk)begin
+        
+        if (~reset) begin
+        
+            pre_vsync <= vsync;
+
+            if (pre_vsync != vsync && pre_vsync == 0) begin
+                
                 if (movementCounter == 6'd10) begin
                     Dragon_1 <= Dragon_Head;
                     Dragon_2 <= Dragon_1;
@@ -48,26 +67,28 @@ module DragonBody(
                     Dragon_5 <= Dragon_4;
                     Dragon_6 <= Dragon_5;
                     Dragon_7 <= Dragon_6;
-                end end else begin // reset
-                    Dragon_1 <= 0;
-                    Dragon_2 <= 0;
-                    Dragon_3 <= 0;
-                    Dragon_4 <= 0;
-                    Dragon_5 <= 0;
-                    Dragon_6 <= 0;
-                    Dragon_7 <= 0;
-            end
+                end
+
+        end end else begin
+            Dragon_1 <= 0;
+            Dragon_2 <= 0;
+            Dragon_3 <= 0;
+            Dragon_4 <= 0;
+            Dragon_5 <= 0;
+            Dragon_6 <= 0;
+            Dragon_7 <= 0;
         end
     end
 
     always @( posedge clk )begin
+        
         if(~reset) begin
             case(lengthUpdate) 
                 MOVE: begin
                     Display_en <= Display_en;
                 end
                 HEAL: begin
-                    Display_en <= (Display_en << 1) | 7'b0000001;
+                    Display_en <= (Display_en << 1) | 1'b1;
                 end
                 HIT: begin
                     Display_en <= Display_en >> 1;
@@ -76,9 +97,9 @@ module DragonBody(
                     Display_en <= Display_en;
                 end
             endcase
-        end else begin // reset
+        end else begin
             Display_en <= 0;
         end
     end
 
-endmodule
+    endmodule

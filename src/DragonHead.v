@@ -11,10 +11,12 @@
 */
 
 module DragonHead (  
-    input clk, 
-    input vsync,
+
+    input clk,
     input reset,
     input [7:0] targetPos,
+  
+    input vsync,
 
     output reg [1:0] dragon_direction,
     output reg [7:0] dragon_pos,
@@ -29,17 +31,19 @@ module DragonHead (
     reg [3:0] sx; //figuring out direction in axis
     reg [3:0] sy;
 
-    // reg pre_vsync; - signal not driven or used
+    reg pre_vsync;
 
     // Movement logic, uses bresenhams line algorithm
 
     always @(posedge clk) begin
         
-        if (vsync) begin
-
-            if (~reset)begin
-                    
-                if (movement_counter < 6'd10) begin
+        if (~reset)begin
+        
+            pre_vsync <= vsync;
+            
+            if(pre_vsync != vsync && pre_vsync == 0) begin
+                
+                if (movement_counter < 6'd12) begin
                     movement_counter <= movement_counter + 1;
                 
                 end else begin
@@ -76,24 +80,24 @@ module DragonHead (
 
                         // Update the next location
                         dragon_pos <= {dragon_x, dragon_y};
-                        
-                    end else begin
-                        // stop moving when the dragon is adjacent to the player 
-                        dragon_x <= dragon_x; 
-                        dragon_y <= dragon_y; 
-                    end
+                      
+                       end else begin
+                            // stop moving when the dragon is adjacent to the player 
+                            dragon_x <= dragon_x; 
+                            dragon_y <= dragon_y; 
+                        end
                 end
+            end 
 
-            end else begin
-                dragon_x <= 0;
-                dragon_y <= 0;
-                movement_counter <= 0;
-                dragon_pos <= 0;
-                dx <= 0; 
-                dy <= 0;
-                sx <= 0; 
-                sy <= 0;
-            end
+        end else begin
+            dragon_x <= 0;
+            dragon_y <= 0;
+            movement_counter <= 0;
+            dragon_pos <= 0;
+            dx <= 0; 
+            dy <= 0;
+            sx <= 0; 
+            sy <= 0;
         end
     end
 
