@@ -59,13 +59,18 @@ module PlayerLogic (
     end
 
     always @(posedge delayedTrigger) begin
-            current_state <= next_state; // Update state
+            
+            if (~reset) begin    
+                current_state <= next_state; // Update state
+                
+            end else begin // reset to idle
+                current_state <= 0;
+        end
     end
-
 
     
     always @(posedge trigger) begin  // animation FSM
-
+       
         if (~reset) begin           
 
                 if (player_anim_counter == 20) begin
@@ -78,9 +83,7 @@ module PlayerLogic (
                     player_anim_counter <= player_anim_counter +1;  
                 end
 
-        end else begin // reset to idle
-            current_state <= 0;
-        end
+        end 
     end
 
     always @(posedge clk) begin  // sword FSM - TODO: refactor to not be dependant on clk
