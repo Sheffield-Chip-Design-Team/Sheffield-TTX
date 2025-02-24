@@ -46,7 +46,8 @@ module PlayerLogic (
 
     //Delay registers - to fix tiiming issues when using all posedge
     reg delayedTrigger;
-    reg [9:0] inputDelay = 0;
+    reg [9:0] inputDelay;
+    reg actionComplete;
 
     // made everythin dependant on clk
     
@@ -65,8 +66,13 @@ module PlayerLogic (
                     current_state <= next_state; // Update state
                 end
             end
+
+            if (actionComplete) begin
+                 inputDelay <= 0;
+            end
+       
         end else begin // reset
-            
+            inputDelay <= 0;
             current_state <= 0;
 
         end
@@ -122,6 +128,7 @@ module PlayerLogic (
                 
                 IDLE_STATE: begin
                     
+                    actionComplete <= 0;
                     sword_position <= 0;
                     sword_visible <= 4'b1111;
 
@@ -166,9 +173,8 @@ module PlayerLogic (
                         player_orientation <= 2'b01;
                         player_direction <= 2'b01;
                     end
-                    if (~trigger) begin // removing multidriven signal?
-                        inputDelay <= 0;            // clear the register to prevent repeat moves
-                    end
+                    
+                    actionComplete <= 1;
                     next_state <= IDLE_STATE;   // Return to IDLE after moving
 
                 end
