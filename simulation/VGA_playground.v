@@ -7,7 +7,7 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-24 23:12:33.141795 
+// BUILD TIME: 2025-02-25 10:15:32.711565 
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -508,7 +508,7 @@ module PlayerLogic (
   localparam IDLE_STATE = 2'b00;  // Move when there is input from the controller
   localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
   localparam MOVE_STATE = 2'b10;  // Wait for input and stay idle
-  localparam ATTACK_DURATION = 6'b000_010;
+  localparam ATTACK_DURATION = 6'b000_100;
 
   reg [5:0] player_anim_counter;
   reg [5:0] sword_duration;  // how long the sword stays visible - (SET BY ATTACK DURATION)
@@ -522,17 +522,15 @@ module PlayerLogic (
   reg [1:0] last_direction;
   reg direction_stored;
 
-  reg [9:0] input_buffer;  // keeps input till there is a release
+  reg [4:0] input_buffer;  // keeps input till there is a release
 
   always @(posedge clk) begin // Movement Input FSM
     if (~reset) begin
         if (input_data[9:5] != 5'b00000) begin
-            input_buffer <= input_data;
+            input_buffer <= input_data[9:5];
         end else if (input_data[4:0] != 5'b00000) begin
         // reset input buffer when buttons are released
         input_buffer <= 0;
-        action_complete <= 0;
-        direction_stored <= 0;
       end
       if (trigger) begin
         // switch between states on trigger
@@ -541,8 +539,6 @@ module PlayerLogic (
     end else begin
       input_buffer  <= 0;
       current_state <= 0;
-      action_complete <= 0;
-      direction_stored <= 0;
     end
   end
 
@@ -552,7 +548,7 @@ module PlayerLogic (
     if (~reset) begin
 
       if (trigger) begin
-        
+
         if (sword_visible == 4'b0001) begin
           sword_duration <= sword_duration + 1;
         end else begin
@@ -579,13 +575,19 @@ module PlayerLogic (
 
     if (~reset) begin
 
+      // Reset the action_complete flag when buttons are released
+      if (input_data[4:0] != 5'b00000) begin
+        action_complete <= 0;
+        direction_stored <= 0;
+      end
+
       case (current_state)
 
         IDLE_STATE: begin
 
           sword_position <= 0;
 
-          case (input_buffer[9])
+          case (input_buffer[4])
             1: begin  // attack
               if(~action_complete) begin
                 next_state <= ATTACK_STATE;
@@ -594,7 +596,7 @@ module PlayerLogic (
 
             0: begin  // no attack
               // Can't access a switch to MOVE_STATE until action_complete is reset to 0
-              if (input_buffer[8:5] != 0 && ~action_complete) begin
+              if (input_buffer[3:0] != 0 && ~action_complete) begin
                 next_state <= MOVE_STATE;
               end
             end
@@ -611,21 +613,21 @@ module PlayerLogic (
           if (~action_complete) begin
             // Move player based on direction inputs and update orientation
             // Check boundary for up movement
-            if (input_buffer[5] == 1 && player_pos[3:0] > 4'b0001) begin
+            if (input_buffer[0] == 1 && player_pos[3:0] > 4'b0001) begin
               player_pos <= player_pos - 1;  // Move up
               player_direction <= 2'b00;
               action_complete <= 1;
             end
 
             // Check boundary for down movement
-            if (input_buffer[6] == 1 && player_pos[3:0] < 4'b1011) begin
+            if (input_buffer[1] == 1 && player_pos[3:0] < 4'b1011) begin
               player_pos <= player_pos + 1;  // Move down
               player_direction <= 2'b10;
               action_complete <= 1;
             end
 
             // Check boundary for left movement
-            if (input_buffer[7] == 1 && player_pos[7:4] > 4'b0000) begin
+            if (input_buffer[2] == 1 && player_pos[7:4] > 4'b0000) begin
               player_pos <= player_pos - 16;  // Move left
               player_orientation <= 2'b11;
               player_direction <= 2'b11;
@@ -633,7 +635,7 @@ module PlayerLogic (
             end
 
             // Check boundary for right movement
-            if (input_buffer[8] == 1 && player_pos[7:4] < 4'b1111) begin
+            if (input_buffer[3] == 1 && player_pos[7:4] < 4'b1111) begin
               player_pos <= player_pos + 16;  // Move right
               player_orientation <= 2'b01;
               player_direction <= 2'b01;
@@ -646,28 +648,28 @@ module PlayerLogic (
         end
 
         ATTACK_STATE: begin
-          if(~action_complete && input_buffer[9]!=0) begin
+          if(~action_complete && input_buffer[4]!=0) begin
             // Check if the sword direction is specified by the player
-            if(input_buffer[8:5] != 0) begin
-              if (input_buffer[5] == 1) begin
+            if(input_buffer[3:0] != 0) begin
+              if (input_buffer[0] == 1) begin
                 last_direction   <= 2'b00;
                 player_direction <= 2'b00;
                 direction_stored <= 1;
               end
 
-              if (input_buffer[6] == 1) begin
+              if (input_buffer[1] == 1) begin
                 last_direction   <= 2'b10;
                 player_direction <= 2'b10;
                 direction_stored <= 1;
               end
 
-              if (input_buffer[7] == 1) begin
+              if (input_buffer[2] == 1) begin
                 last_direction   <= 2'b11;
                 player_direction <= 2'b11;
                 direction_stored <= 1;
               end
 
-              if (input_buffer[8] == 1) begin
+              if (input_buffer[3] == 1) begin
                 last_direction   <= 2'b01;
                 player_direction <= 2'b01;
                 direction_stored <= 1;
@@ -724,10 +726,13 @@ module PlayerLogic (
       player_pos <= 8'b0001_0011;
       player_orientation <= 2'b01;
       player_direction <= 2'b01;
+      action_complete <= 0;
+      direction_stored <= 0;
     end
   end
 
 endmodule
+
 //================================================
 
 // Module : Dragon Head
@@ -924,7 +929,7 @@ module DragonBody(
                     Display_en <= Display_en;
                 end
                 HEAL: begin
-                    Display_en <= (Display_en << 1) | 1'b1;
+                    Display_en <= (Display_en << 1) | 7'b0000001;
                 end
                 HIT: begin
                     Display_en <= Display_en >> 1;
