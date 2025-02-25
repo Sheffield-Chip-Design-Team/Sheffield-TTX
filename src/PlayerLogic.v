@@ -29,7 +29,7 @@ module PlayerLogic (
   localparam IDLE_STATE = 2'b00;  // Move when there is input from the controller
   localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
   localparam MOVE_STATE = 2'b10;  // Wait for input and stay idle
-  localparam ATTACK_DURATION = 6'b000_010;
+  localparam ATTACK_DURATION = 6'b000_100;
 
   reg [5:0] player_anim_counter;
   reg [5:0] sword_duration;  // how long the sword stays visible - (SET BY ATTACK DURATION)
@@ -52,8 +52,6 @@ module PlayerLogic (
         end else if (input_data[4:0] != 5'b00000) begin
         // reset input buffer when buttons are released
         input_buffer <= 0;
-        action_complete <= 0;
-        direction_stored <= 0;
       end
       if (trigger) begin
         // switch between states on trigger
@@ -62,8 +60,6 @@ module PlayerLogic (
     end else begin
       input_buffer  <= 0;
       current_state <= 0;
-      action_complete <= 0;
-      direction_stored <= 0;
     end
   end
 
@@ -73,7 +69,7 @@ module PlayerLogic (
     if (~reset) begin
 
       if (trigger) begin
-        
+
         if (sword_visible == 4'b0001) begin
           sword_duration <= sword_duration + 1;
         end else begin
@@ -99,6 +95,12 @@ module PlayerLogic (
   always @(posedge clk) begin  // Player State FSM
 
     if (~reset) begin
+
+      // Reset the action_complete flag when buttons are released
+      if (input_data[4:0] != 5'b00000) begin
+        action_complete <= 0;
+        direction_stored <= 0;
+      end
 
       case (current_state)
 
@@ -245,6 +247,8 @@ module PlayerLogic (
       player_pos <= 8'b0001_0011;
       player_orientation <= 2'b01;
       player_direction <= 2'b01;
+      action_complete <= 0;
+      direction_stored <= 0;
     end
   end
 
