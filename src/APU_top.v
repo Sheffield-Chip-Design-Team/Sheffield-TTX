@@ -110,7 +110,7 @@ module APU(
 
 always @(posedge clk) begin
   prev_SwordDragonCollision <= SwordDragonCollision ;  
-  if ((SwordDragonCollision ~= prev_SwordDragonCollision) && (prev_SwordDragonCollision == 0)) begin
+  if ((SwordDragonCollision != prev_SwordDragonCollision) && (prev_SwordDragonCollision == 0)) begin
       lfsr <= {lfsr[11:0], feedback};
 
   end
