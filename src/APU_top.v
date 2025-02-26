@@ -103,6 +103,19 @@ module APU(
   // kick wave
   wire square60hz =  y < 262;                 // standing 60Hz square wave
 
+
+  reg prev_SwordDragonCollision ;
+  reg [12:0] lfsr;
+  wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
+
+always @(posedge clk) begin
+  prev_SwordDragonCollision <= SwordDragonCollision ;  
+  if ((SwordDragonCollision ~= prev_SwordDragonCollision) && (prev_SwordDragonCollision == 0)) begin
+      lfsr <= {lfsr[11:0], feedback};
+
+  end
+end
+
   // snare noise    
   // reg [12:0] lfsr;
   // wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
@@ -211,3 +224,4 @@ module APU(
     end
     end
   end
+endmodule
