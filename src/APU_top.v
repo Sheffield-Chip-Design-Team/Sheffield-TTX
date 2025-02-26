@@ -1,4 +1,5 @@
-/*
+
+    /*
  * Music from "Drop" demo.
  * Full version: https://github.com/rejunity/tt08-vga-drop
  *
@@ -72,48 +73,22 @@
 `define As5 17; // 932.32 Hz 
 `define B5  16; // 987.76 Hz 
 
-module tt_um_vga_example(
-  input  wire [7:0] ui_in,    // Dedicated inputs
-  output wire [7:0] uo_out,   // Dedicated outputs
-  input  wire [7:0] uio_in,   // IOs: Input path
-  output wire [7:0] uio_out,  // IOs: Output path
-  output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-  input  wire       ena,      // always 1 when the design is powered, so you can ignore it
-  input  wire       clk,      // clock
-  input  wire       rst_n     // reset_n - low to reset
+module APU(
+
+  input wire clk,   // clock
+  input wire rst_n, // reset_n - low to reset
+  // input wire bgm_ena,
+  // input wire effect_code,
+  input wire [9:0] x,     // hpos
+  input wire [9:0] y,     //ypos
+
+  output wire Audio_Output
 );
 
   // VGA signals
-  wire hsync;
-  wire vsync;
-  wire [1:0] R;
-  wire [1:0] G;
-  wire [1:0] B;
-  wire video_active;
-  wire [9:0] x;
-  wire [9:0] y;
   wire sound;
 
-  // TinyVGA PMOD
-  // assign {R,G,B} = {6{video_active * sound}};
-  assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-  assign uio_out = {sound, 1'b1,6'b0};//uio_out[6] enable the amplifier circuit
-
-  // Unused outputs assigned to 0.
-  assign uio_oe  = 8'hff;
-
-  // Suppress unused signals warning
-  wire _unused_ok = &{ena, ui_in, uio_in};
-
-  hvsync_generator hvsync_gen(
-    .clk(clk),
-    .reset(~rst_n),
-    .hsync(hsync),
-    .vsync(vsync),
-    .display_on(video_active),
-    .hpos(x),
-    .vpos(y)
-  );
+  assign Audio_Output = sound;
 
   wire [2:0] part = frame_counter[10-:3];
   wire [12:0] timer = frame_counter;
@@ -182,9 +157,9 @@ module tt_um_vga_example(
       // 3'd7 : note2_freq = `A5
   endcase
 
-  // wire kick   = square60hz & (x < envelopeA*4);   
+  wire kick   = square60hz & (x < envelopeA*4);
   wire kick   = 0;                   // 60Hz square wave with half second envelope
-  wire snare  = 1'b0     & (x >= 128 && x < 128+envelopeB*4);   // noise with half a second envelope
+  wire snare  = 1'b0       & (x >= 128 && x < 128+envelopeB);   // noise with half a second envelope
   wire lead   = note       & (x >= 256 && x < 256+envelopeB*8);   // ROM square wave with quarter second envelope
   wire base   = note2      & (x >= 256 && x < ((beats_1_3)?(512+8*4):(512+32*4))); 
     //  wire base   = note2      & (x >= 512 && x < 256+envelopeB*8); 
@@ -192,7 +167,7 @@ module tt_um_vga_example(
 
   reg [11:0] frame_counter;
   always @(posedge clk) begin
-    if (~rst_n) begin
+    if (rst_n) begin
       frame_counter <= 0;
       noise_counter <= 0;
       note_counter <= 0;
@@ -208,7 +183,7 @@ module tt_um_vga_example(
       end
 
       // noise
-      if (x == 0) begin
+    if (x == 0) begin
       //   if (noise_counter > 1) begin 
       //     noise_counter <= 0;
       //     noise <= noise ^ noise_src;
@@ -218,21 +193,21 @@ module tt_um_vga_example(
 
       // square wave
       if (x == 0) begin
-        // if (note_counter > note_freq) begin
-        //   note_counter <= 0;
-        //   note <= ~note;
-        // end else begin
-        //   note_counter <= note_counter + 1'b1;
-        // end
+        if (note_counter > note_freq) begin
+          note_counter <= 0;
+          note <= ~note;
+        end else begin
+          note_counter <= note_counter + 1'b1;
+        end
 
         if (note2_counter > note2_freq) begin
           note2_counter <= 0;
           note2 <= ~note2;
         end else begin
           note2_counter <= note2_counter + 1'b1;
+        
         end
       end
     end
+    end
   end
-  end
-endmodule
