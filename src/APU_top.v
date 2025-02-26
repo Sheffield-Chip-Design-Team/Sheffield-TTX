@@ -112,7 +112,6 @@ always @(posedge clk) begin
   prev_SwordDragonCollision <= SwordDragonCollision ;  
   if ((SwordDragonCollision != prev_SwordDragonCollision) && (prev_SwordDragonCollision == 0)) begin
       lfsr <= {lfsr[11:0], feedback};
-
   end
 end
 
@@ -170,13 +169,13 @@ end
       // 3'd7 : note2_freq = `A5
   endcase
 
-  wire kick   = square60hz & (x < envelopeA*4);
+  //wire kick   = square60hz & (x < envelopeA*4);
   wire kick   = 0;                   // 60Hz square wave with half second envelope
-  wire snare  = 1'b0       & (x >= 128 && x < 128+envelopeB);   // noise with half a second envelope
+  wire snare  = noise       & (x >= 128 && x < 128+envelopeB);   // noise with half a second envelope
   wire lead   = note       & (x >= 256 && x < 256+envelopeB*8);   // ROM square wave with quarter second envelope
   wire base   = note2      & (x >= 256 && x < ((beats_1_3)?(512+8*4):(512+32*4))); 
     //  wire base   = note2      & (x >= 512 && x < 256+envelopeB*8); 
-  assign sound = { kick | (snare & beats_1_3 & part != 0) | (base) | (lead & part > 2) };
+  assign sound = { kick | (snare) | (base) | (lead & part > 2) };
 
   reg [11:0] frame_counter;
   always @(posedge clk) begin
@@ -185,7 +184,7 @@ end
       noise_counter <= 0;
       note_counter <= 0;
       note2_counter <= 0;
-      // noise <= 0;
+      noise <= 0;
       note <= 0;
       note2 <= 0;
 
