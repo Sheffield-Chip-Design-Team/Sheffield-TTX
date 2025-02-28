@@ -231,7 +231,7 @@ module PlayerLogic (
           end
 
           if (sword_duration == ATTACK_DURATION) begin // Attack State duration
-            sword_visible  <= 4'b1111; // Make sword invisible
+            sword_visible  <= 4'b0000; // Make sword invisible
             next_state <= IDLE_STATE;  // Return to IDLE after attacking
           end
         end
