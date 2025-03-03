@@ -88,6 +88,7 @@ module PlayerLogic (
         end
       end end else begin  // reset attack
         sword_duration <= 0;
+        player_sprite <= 4'b0011;
         player_anim_counter <= 0;
     end
   end
