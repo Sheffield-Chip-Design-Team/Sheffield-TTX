@@ -213,6 +213,8 @@ module tt_um_Enjimneering_top (
         .clk(clk),
         .rst_n(~rst_n),
 
+        .SwordDragonCollision(SwordDragonCollision),
+
         .x(pix_x),
         .y(pix_y),
         .Audio_Output(audio_out)
@@ -366,6 +368,7 @@ module APU(
 
   input wire clk,   // clock
   input wire rst_n, // reset_n - high to reset
+  input wire SwordDragonCollision,
   // input wire bgm_ena,
   // input wire effect_code,
   input wire [9:0] x,     // hpos
@@ -381,7 +384,7 @@ module APU(
 
   wire [2:0] part = frame_counter[10-:3];
   wire [12:0] timer = frame_counter;
-  // reg noise, noise_src = ^lfsr;
+  reg noise, noise_src = ^lfsr;
   reg [2:0] noise_counter;
 
   // envelopes
@@ -405,10 +408,10 @@ always @(posedge clk) begin
 end
 
   // snare noise    
-  // reg [12:0] lfsr;
-  // wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
+//   reg [12:0] lfsr;
+//   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
   always @(posedge clk) begin
-    // lfsr <= {lfsr[11:0], feedback};
+    lfsr <= {lfsr[11:0], feedback};
     // lfsr <= lfsr[12:0];
   end
 
