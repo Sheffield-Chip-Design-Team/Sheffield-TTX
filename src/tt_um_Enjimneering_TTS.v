@@ -207,15 +207,15 @@ module tt_um_Enjimneering_top (
     );
 
     //Audio wire
-    wire Audio_out;
+    wire audio_out;
     //Audio unit
-    APU_top apu(
+    APU apu (
         .clk(clk),
         .rst_n(~rst_n),
 
         .x(pix_x),
         .y(pix_y),
-        .Audio_Output(Audio_out)
+        .Audio_Output(audio_out)
     );
 
     // display sync signals
@@ -281,11 +281,11 @@ module tt_um_Enjimneering_top (
     // System IO Connections
     assign uio_oe  = 8'b0000_0011;
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
-    assign uio_out[7:6] = {Audio_out, 1'b1}; //Audio output, and a 1 to enable amplifier circuit
+    assign uio_out[7:6] = {audio_out, 1'b1}; //Audio output, and a 1 to enable amplifier circuit
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[7:2] = 0;
+    assign uio_out[5:2] = 0;
     wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
     NES_Data, 
     SwordDragonCollision, 
