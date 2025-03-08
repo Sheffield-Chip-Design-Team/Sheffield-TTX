@@ -205,7 +205,7 @@ module tt_um_Enjimneering_top (
     );
 
     //Audio wire
-    wire audio_out;
+    wire Audio_out;
     //Audio unit
     APU_top apu(
         .clk(clk),
@@ -213,7 +213,7 @@ module tt_um_Enjimneering_top (
 
         .x(pix_x),
         .y(pix_y),
-        .Audio_Output(audio_out)
+        .Audio_Output(Audio_out)
     );
 
     // display sync signals
