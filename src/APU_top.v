@@ -73,10 +73,10 @@
 `define As5 17; // 932.32 Hz 
 `define B5  16; // 987.76 Hz 
 
-module APU(
+module APU_top(
 
   input wire clk,   // clock
-  input wire rst_n, // reset_n - low to reset
+  input wire rst_n, // reset_n - high to reset
   // input wire bgm_ena,
   // input wire effect_code,
   input wire [9:0] x,     // hpos
