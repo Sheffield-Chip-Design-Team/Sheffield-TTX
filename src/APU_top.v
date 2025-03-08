@@ -1,13 +1,6 @@
 
-    /*
- * Music from "Drop" demo.
- * Full version: https://github.com/rejunity/tt08-vga-drop
- *
- * Copyright (c) 2024 Renaldas Zioma, Erik Hemming
- * SPDX-License-Identifier: Apache-2.0
- */
 
-`default_nettype none
+// `default_nettype none
 
 `define MUSIC_SPEED   1'b1;  // for 60 FPS
 // `define MUSIC_SPEED   2'd2;  // for 30 FPS

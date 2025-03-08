@@ -17,6 +17,7 @@
 //   `include "Sheep.v"
 //   `include "Sync.v"
 //   `include "PPU.v"
+//   `include "APU_top.v"
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
