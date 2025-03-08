@@ -8,7 +8,15 @@
 */
 
 // === BUILD DEPENDENCIES === 
-
+//   `include "NESReciever.v"
+//   `include "ControlInterface.v"
+//   `include "GameStateController.v"
+//   `include "PlayerLogic.v"
+//   `include "DragonHead.v"
+//   `include "DragonBody.v"
+//   `include "Sheep.v"
+//   `include "Sync.v"
+//   `include "PPU.v"
 //   `include "APU_top.v"
 
 
