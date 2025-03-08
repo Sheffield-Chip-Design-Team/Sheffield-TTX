@@ -16,10 +16,12 @@ module tb ();
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
 
+ wire VPWR = 1'b1; wire VGND = 1'b0;
+
   tt_um_Enjimneering_top tts (
     `ifdef GL_TEST     // Include power ports for the Gate Level test:
-          .VPWR(1'b1),
-          .VGND(1'b0),
+          .VPWR(VPWR),
+          .VGND(VGND),
     `endif
         .ui_in  (ui_in),    // Dedicated inputs
         .uo_out (uo_out),   // Dedicated outputs
