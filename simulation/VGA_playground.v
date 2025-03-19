@@ -13,7 +13,7 @@
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
 // TT Pinout (standard for TT projects - can't change this)
-module tt_um_vga_example ( 
+module tt_um_Enjimneering_top ( 
 
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
@@ -49,6 +49,7 @@ module tt_um_vga_example (
         .attack(ui_in[4]),
         .control_state(input_data)
     );
+
     wire PlayerDragonCollision;
     wire SwordDragonCollision;
     wire SheepDragonCollision;
@@ -177,7 +178,7 @@ module tt_um_vga_example (
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
         .entity_2       ({4'b0001, sword_orientation, sword_position, 3'b000,sword_visible[0]}),     // sword
-        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
+        .entity_3       ({4'b0111, 2'b01, sheep_pos, 4'b0001}) ,                           // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
         .entity_6       (18'b1111_11_1111_1111_0001),
@@ -198,13 +199,15 @@ module tt_um_vga_example (
     //Audio wire
     wire audio_out;
     //Audio unit
-    APU_top apu (
+    APU apu (
         .clk(clk),
         .rst_n(~rst_n),
 
+        .SwordDragonCollision(SwordDragonCollision),
+
         .x(pix_x),
         .y(pix_y),
-        .audio_out(audio_out)
+        .Audio_Output(audio_out)
     );
 
     // display sync signals
@@ -270,14 +273,13 @@ module tt_um_vga_example (
     // System IO Connections
     assign uio_oe  = 8'b0000_0011;
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
-    assign uio_out[7:6] = {audio_out, 1'b1} //Audio output, and a 1 to enable amplifier circuit
+    assign uio_out[7:6] = {audio_out, 1'b1}; //Audio output, and a 1 to enable amplifier circuit
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[7:2] = 0;
+    assign uio_out[5:2] = 0;
     wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
     NES_Data, 
-    SwordDragonCollision, 
     SheepDragonCollision, 
     player_direction, 
     sheep_sprite, 
@@ -1765,10 +1767,11 @@ module SpriteROM (
 `define As5 17; // 932.32 Hz 
 `define B5  16; // 987.76 Hz 
 
-module APU_top(
+module APU(
 
   input wire clk,   // clock
   input wire rst_n, // reset_n - high to reset
+  input wire SwordDragonCollision,
   // input wire bgm_ena,
   // input wire effect_code,
   input wire [9:0] x,     // hpos
@@ -1781,10 +1784,10 @@ module APU_top(
   wire sound;
 
   assign Audio_Output = sound;
-
+  reg [12:0] lfsr;
   wire [2:0] part = frame_counter[10-:3];
   wire [12:0] timer = frame_counter;
-  // reg noise, noise_src = ^lfsr;
+  reg noise, noise_src;
   reg [2:0] noise_counter;
 
   // envelopes
@@ -1797,7 +1800,7 @@ module APU_top(
 
 
   reg prev_SwordDragonCollision ;
-  reg [12:0] lfsr;
+ 
   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
 
 always @(posedge clk) begin
@@ -1808,10 +1811,10 @@ always @(posedge clk) begin
 end
 
   // snare noise    
-  // reg [12:0] lfsr;
-  // wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
+//   reg [12:0] lfsr;
+//   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
   always @(posedge clk) begin
-    // lfsr <= {lfsr[11:0], feedback};
+    lfsr <= {lfsr[11:0], feedback};
     // lfsr <= lfsr[12:0];
   end
 
@@ -1869,7 +1872,7 @@ end
     //  wire base   = note2      & (x >= 512 && x < 256+envelopeB*8); 
   assign sound = { kick | (snare) | (base) | (lead & part > 2) };
 
-  reg [11:0] frame_counter;
+  reg [12:0] frame_counter;
   always @(posedge clk) begin
     if (rst_n) begin
       frame_counter <= 0;
@@ -1881,6 +1884,7 @@ end
       note2 <= 0;
 
     end else begin
+      noise_src = ^lfsr;
 
       if (x == 0 && y == 0) begin
         frame_counter <= frame_counter + `MUSIC_SPEED;
@@ -1916,4 +1920,8 @@ end
     end
   end
 endmodule
+
+
+
+
 

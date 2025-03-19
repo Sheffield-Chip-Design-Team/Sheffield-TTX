@@ -32,7 +32,8 @@ module tt_um_Enjimneering_top (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n    // reset_n - low to reset   
+    input  wire       rst_n,    // reset_n - low to reset   
+    input  wire       apu_test
 );
 
     //system signals
@@ -213,7 +214,7 @@ module tt_um_Enjimneering_top (
         .clk(clk),
         .rst_n(~rst_n),
 
-        .SwordDragonCollision(SwordDragonCollision),
+        .SwordDragonCollision(apu_test),
 
         .x(pix_x),
         .y(pix_y),
@@ -290,7 +291,6 @@ module tt_um_Enjimneering_top (
     assign uio_out[5:2] = 0;
     wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
     NES_Data, 
-    SwordDragonCollision, 
     SheepDragonCollision, 
     player_direction, 
     sheep_sprite, 
@@ -381,10 +381,10 @@ module APU(
   wire sound;
 
   assign Audio_Output = sound;
-
+  reg [12:0] lfsr;
   wire [2:0] part = frame_counter[10-:3];
   wire [12:0] timer = frame_counter;
-  reg noise, noise_src = ^lfsr;
+  reg noise, noise_src;
   reg [2:0] noise_counter;
 
   // envelopes
@@ -397,7 +397,7 @@ module APU(
 
 
   reg prev_SwordDragonCollision ;
-  reg [12:0] lfsr;
+ 
   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
 
 always @(posedge clk) begin
@@ -469,7 +469,7 @@ end
     //  wire base   = note2      & (x >= 512 && x < 256+envelopeB*8); 
   assign sound = { kick | (snare) | (base) | (lead & part > 2) };
 
-  reg [11:0] frame_counter;
+  reg [12:0] frame_counter;
   always @(posedge clk) begin
     if (rst_n) begin
       frame_counter <= 0;
@@ -481,6 +481,7 @@ end
       note2 <= 0;
 
     end else begin
+      noise_src <= ^lfsr;
 
       if (x == 0 && y == 0) begin
         frame_counter <= frame_counter + `MUSIC_SPEED;
