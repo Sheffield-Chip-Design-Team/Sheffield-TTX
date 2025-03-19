@@ -29,7 +29,7 @@ module tt_um_Enjimneering_top (
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
     output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
+//    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
     input  wire       rst_n,    // reset_n - low to reset   
@@ -163,7 +163,7 @@ module tt_um_Enjimneering_top (
     wire [3:0] sheep_sprite;
 
     sheepLogic sheep (
-        .clk(ui_in[7]), 
+        .clk(clk), 
         .reset(~rst_n),
         .read_enable(1), 
         .dragon_pos(dragon_position), 
@@ -207,11 +207,18 @@ module tt_um_Enjimneering_top (
         .colour         (pixel_value)
     );
 
+    clk_wiz_0 APU_CLK(
+      .clk_in1(clk),
+      .reset(rst_n),
+
+      .clk_out1(apu_clk)
+    );
+
     //Audio wire
     wire audio_out;
     //Audio unit
     APU apu (
-        .clk(clk),
+        .clk(apu_clk),
         .rst_n(~rst_n),
 
         .SwordDragonCollision(apu_test),
@@ -286,9 +293,9 @@ module tt_um_Enjimneering_top (
     assign uio_out[1:0] = {NES_Latch, NES_Clk};
     assign uio_out[7:6] = {audio_out, 1'b1}; //Audio output, and a 1 to enable amplifier circuit
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
-    
+    assign uio_out[5] = apu_test;
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[5:2] = 0;
+    assign uio_out[4:2] = 0;
     wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
     NES_Data, 
     SheepDragonCollision, 
@@ -401,19 +408,18 @@ module APU(
   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
 
 always @(posedge clk) begin
-  prev_SwordDragonCollision <= SwordDragonCollision ;  
-  if ((SwordDragonCollision != prev_SwordDragonCollision) && (prev_SwordDragonCollision == 0)) begin
+
       lfsr <= {lfsr[11:0], feedback};
-  end
+
 end
 
   // snare noise    
 //   reg [12:0] lfsr;
 //   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
-  always @(posedge clk) begin
-    lfsr <= {lfsr[11:0], feedback};
-    // lfsr <= lfsr[12:0];
-  end
+  // always @(posedge clk) begin
+  //   lfsr <= {lfsr[11:0], feedback};
+  //   // lfsr <= lfsr[12:0];
+  // end
 
   // lead wave counter
   reg [7:0] note_freq;
@@ -461,13 +467,14 @@ end
       // 3'd7 : note2_freq = `A5
   endcase
 
-  //wire kick   = square60hz & (x < envelopeA*4);
-  wire kick   = 0;                   // 60Hz square wave with half second envelope
-  wire snare  = noise       & (x >= 128 && x < 128+envelopeB);   // noise with half a second envelope
+  wire kick   = square60hz & (x < envelopeA*4) & SwordDragonCollision;
+  // wire kick   = 0;                   // 60Hz square wave with half second envelope
+  wire snare  = noise       & (x >= 128 && x < 128+envelopeB) & SwordDragonCollision;   // noise with half a second envelope
   wire lead   = note       & (x >= 256 && x < 256+envelopeB*8);   // ROM square wave with quarter second envelope
   wire base   = note2      & (x >= 256 && x < ((beats_1_3)?(512+8*4):(512+32*4))); 
     //  wire base   = note2      & (x >= 512 && x < 256+envelopeB*8); 
-  assign sound = { kick | (snare) | (base) | (lead & part > 2) };
+  // assign sound = { kick | (snare) | (base) | (lead & part > 2) };
+assign sound = 1;
 
   reg [12:0] frame_counter;
   always @(posedge clk) begin
@@ -489,12 +496,12 @@ end
 
       // noise
     if (x == 0) begin
-      //   if (noise_counter > 1) begin 
-      //     noise_counter <= 0;
-      //     noise <= noise ^ noise_src;
-      //   end else
-      //     noise_counter <= noise_counter + 1'b1;
-      // end
+        if (noise_counter > 1) begin 
+          noise_counter <= 0;
+          noise <= noise ^ noise_src;
+        end else begin
+          noise_counter <= noise_counter + 1'b1;
+        end
 
       // square wave
       if (x == 0) begin
@@ -510,12 +517,12 @@ end
           note2 <= ~note2;
         end else begin
           note2_counter <= note2_counter + 1'b1;
-        
         end
+        
       end
     end
     end
-  end
+ end
 endmodule
 
 
