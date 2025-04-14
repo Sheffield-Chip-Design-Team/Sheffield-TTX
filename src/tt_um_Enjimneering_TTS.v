@@ -217,16 +217,16 @@ module tt_um_Enjimneering_top (
     //Audio wire
     wire audio_out;
     //Audio unit
-    APU apu (
-        .clk(apu_clk),
-        .rst_n(~rst_n),
+    // APU apu (
+    //     .clk(apu_clk),
+    //     .rst_n(~rst_n),
 
-        .SwordDragonCollision(apu_test),
+    //     .SwordDragonCollision(apu_test),
 
-        .x(pix_x),
-        .y(pix_y),
-        .Audio_Output(audio_out)
-    );
+    //     .x(pix_x),
+    //     .y(pix_y),
+    //     .Audio_Output(audio_out)
+    // );
 
     // display sync signals
     wire hsync;
@@ -374,7 +374,7 @@ endmodule
 module APU(
 
   input wire clk,   // clock
-  input wire rst_n, // reset_n - high to reset
+  input wire ~rst_n, // reset_n - high to reset
   input wire SwordDragonCollision,
   // input wire bgm_ena,
   // input wire effect_code,
