@@ -207,26 +207,26 @@ module tt_um_Enjimneering_top (
         .colour         (pixel_value)
     );
 
-    clk_wiz_0 APU_CLK(
-      .clk_in1(clk),
-      .reset(rst_n),
+    // clk_wiz_0 APU_CLK(
+    //   .clk_in1(clk),
+    //   .reset(rst_n),
 
-      .clk_out1(apu_clk)
-    );
+    //   .clk_out1(apu_clk)
+    // );
 
     //Audio wire
     wire audio_out;
     //Audio unit
-    // APU apu (
-    //     .clk(apu_clk),
-    //     .rst_n(~rst_n),
+    APU apu (
+        .clk(clk),
+        .rst_n(~rst_n),
 
-    //     .SwordDragonCollision(apu_test),
+        .SwordDragonCollision(apu_test),
 
-    //     .x(pix_x),
-    //     .y(pix_y),
-    //     .Audio_Output(audio_out)
-    // );
+        .x(pix_x),
+        .y(pix_y),
+        .Audio_Output(audio_out)
+    );
 
     // display sync signals
     wire hsync;
