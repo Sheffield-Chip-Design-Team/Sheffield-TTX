@@ -374,7 +374,7 @@ endmodule
 module APU(
 
   input wire clk,   // clock
-  input wire ~rst_n, // reset_n - high to reset
+  input wire rst_n, // reset_n - high to reset
   input wire SwordDragonCollision,
   // input wire bgm_ena,
   // input wire effect_code,
