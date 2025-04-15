@@ -27,6 +27,7 @@ project:
     - "Sheep.v"
     - "SpriteROM.v"
     - "Sync.v"
+    - "APU_top.v"
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
