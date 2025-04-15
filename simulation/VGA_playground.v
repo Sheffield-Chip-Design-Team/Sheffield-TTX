@@ -131,7 +131,7 @@ module tt_um_vga_example (
 
         .clk(clk),
         .reset(~rst_n),
-        .lengthUpdate(2'b01),
+        .hit(SwordDragonCollision),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
@@ -867,7 +867,9 @@ module DragonBody(
     input clk,
     input reset,
     input vsync,
-    input [1:0] lengthUpdate,           // MUST be a PULSE
+    input move,
+    input hit,
+    input heal,          // MUST be a PULSE
     input [5:0] movementCounter,
     input [9:0] Dragon_Head,            // [9:8] orientation, [7:0]  position
 
@@ -923,18 +925,18 @@ module DragonBody(
 
     always @( posedge clk )begin
         
-        if(~reset) begin
-            case(lengthUpdate) 
-                MOVE: begin
+        if(~reset) begin 
+            case(1'b1) 
+                move: begin
                     Display_en <= Display_en;
                 end
-                HEAL: begin
+                heal: begin
                     Display_en <= (Display_en << 1) | 7'b0000001;
                 end
-                HIT: begin
+                hit: begin
                     Display_en <= Display_en >> 1;
                 end
-                IDLE: begin
+                default: begin
                     Display_en <= Display_en;
                 end
             endcase

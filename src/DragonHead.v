@@ -40,7 +40,9 @@ module DragonHead (
         if (~reset)begin
         
             pre_vsync <= vsync;
-            
+           
+            // todo : dragon location should reset to top left
+
             if(pre_vsync != vsync && pre_vsync == 0) begin
                 
                 if (movement_counter < 6'd12) begin
