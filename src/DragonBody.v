@@ -94,7 +94,7 @@ module DragonBody(
                 default: Display_en <= Display_en;
             endcase
         end else begin
-            Display_en <= 0;
+            Display_en <= 7'b0000001;
         end
     end
 

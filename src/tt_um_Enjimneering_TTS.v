@@ -137,12 +137,16 @@ module tt_um_Enjimneering_top (
 
     wire [6:0] VisibleSegments;
 
+    reg ShDC_Delay;
+    reg SwDc_Delay;
+    always@(posedge clk) if(rst_n) SeDC_Delay <= SheepDragonCollision else ShDC_Delay <= 0;
+    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision else SwDc_Delay <= 0;
     DragonBody dragonBody(
 
         .clk(clk),
         .reset(~rst_n),
-        .heal(SheepDragonCollision),
-        .hit(SwordDragonCollision),
+        .heal(SheepDragonCollision & ~ShDC_Delay),
+        .hit(SwordDragonCollision & ~SwDc_Delay),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
