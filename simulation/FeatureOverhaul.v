@@ -154,7 +154,8 @@ module tt_um_vga_example (
 
         .clk(clk),
         .reset(~rst_n),
-        .lengthUpdate(2'b01),
+        .heal(SheepDragonCollision),
+        .hit(SwordDragonCollision),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
@@ -993,12 +994,36 @@ endmodule
             
 */
 
+
+// Module : Dragon Body
+// Author: Bowen Shi
+
+/* 
+    Description:
+    The Dragon body segment 
+            
+*/
+
+// Module : Dragon Body
+// Author: Bowen Shi
+
+// Changes
+// renamed ports
+//  OrenPositrion -> Dragon_Head
+//  State
+/* 
+    Description:
+    The Dragon body segment 
+            
+*/
+
 module DragonBody(
 
     input clk,
     input reset,
     input vsync,
-    input [1:0] lengthUpdate,           // MUST be a PULSE
+    input heal,                         // grow
+    input hit,                          // shrink
     input [5:0] movementCounter,
     input [9:0] Dragon_Head,            // [9:8] orientation, [7:0]  position
 
@@ -1012,14 +1037,6 @@ module DragonBody(
 
     output reg [6:0] Display_en
     );
-
-    // lengthUpdate states
-
-    localparam MOVE = 2'b00; // do nothing
-    localparam IDLE = 2'b11; // do nothing
-    localparam HEAL = 2'b01; // grow
-    localparam HIT = 2'b10;  // shrink
-
 
     reg pre_vsync;
 
@@ -1055,26 +1072,21 @@ module DragonBody(
     always @( posedge clk )begin
         
         if(~reset) begin
-            case(lengthUpdate) 
-                MOVE: begin
-                    Display_en <= Display_en;
+            case(1'b1) 
+                heal: begin
+                    Display_en <= (Display_en << 1) | 7'b0000001;
                 end
-                HEAL: begin
-                    Display_en <= (Display_en << 1) | 1'b1;
-                end
-                HIT: begin
+                hit: begin
                     Display_en <= Display_en >> 1;
                 end
-                IDLE: begin
-                    Display_en <= Display_en;
-                end
+                default: Display_en <= Display_en;
             endcase
         end else begin
-            Display_en <= 0;
+            Display_en <= 7'b0000001;
         end
     end
 
-    endmodule
+endmodule
 
     
 //================================================

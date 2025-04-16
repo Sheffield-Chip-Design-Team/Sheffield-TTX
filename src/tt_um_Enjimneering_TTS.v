@@ -141,7 +141,8 @@ module tt_um_Enjimneering_top (
 
         .clk(clk),
         .reset(~rst_n),
-        .lengthUpdate(2'b01),
+        .heal(SheepDragonCollision),
+        .hit(SwordDragonCollision),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),

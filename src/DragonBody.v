@@ -26,7 +26,8 @@ module DragonBody(
     input clk,
     input reset,
     input vsync,
-    input [1:0] lengthUpdate,           // MUST be a PULSE
+    input heal,                         // grow
+    input hit,                          // shrink
     input [5:0] movementCounter,
     input [9:0] Dragon_Head,            // [9:8] orientation, [7:0]  position
 
@@ -83,19 +84,14 @@ module DragonBody(
     always @( posedge clk )begin
         
         if(~reset) begin
-            case(lengthUpdate) 
-                MOVE: begin
-                    Display_en <= Display_en;
-                end
-                HEAL: begin
+            case(1'b1) 
+                heal: begin
                     Display_en <= (Display_en << 1) | 7'b0000001;
                 end
-                HIT: begin
+                hit: begin
                     Display_en <= Display_en >> 1;
                 end
-                IDLE: begin
-                    Display_en <= Display_en;
-                end
+                default: Display_en <= Display_en;
             endcase
         end else begin
             Display_en <= 0;

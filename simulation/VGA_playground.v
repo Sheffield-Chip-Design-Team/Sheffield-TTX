@@ -941,7 +941,7 @@ module DragonBody(
                 end
             endcase
         end else begin
-            Display_en <= 0;
+            Display_en <= 7'b1111111;
         end
     end
 
