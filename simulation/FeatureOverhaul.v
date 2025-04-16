@@ -152,8 +152,8 @@ module tt_um_vga_example (
     );
     reg ShDC_Delay;
     reg SwDc_Delay;
-    always@(posedge clk) if(rst_n) SeDC_Delay <= SheepDragonCollision else ShDC_Delay <= 0;
-    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision else SwDc_Delay <= 0;
+    always@(posedge clk) if(rst_n) SeDC_Delay <= SheepDragonCollision; else ShDC_Delay <= 0;
+    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision; else SwDc_Delay <= 0;
     DragonBody dragonBody(
 
         .clk(clk),
