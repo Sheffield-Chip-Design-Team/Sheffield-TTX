@@ -17,6 +17,7 @@
 //   `include "Sheep.v"
 //   `include "Sync.v"
 //   `include "PPU.v"
+//   `include "Heart.v"
 
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -136,11 +137,16 @@ module tt_um_Enjimneering_top (
 
     wire [6:0] VisibleSegments;
 
+    reg ShDC_Delay;
+    reg SwDc_Delay;
+    always@(posedge clk) if(rst_n) ShDC_Delay <= SheepDragonCollision; else ShDC_Delay <= 0;
+    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision; else SwDc_Delay <= 0;
     DragonBody dragonBody(
 
         .clk(clk),
         .reset(~rst_n),
-        .lengthUpdate(2'b01),
+        .heal(SheepDragonCollision & ~ShDC_Delay),
+        .hit(SwordDragonCollision & ~SwDc_Delay),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
@@ -263,6 +269,24 @@ module tt_um_Enjimneering_top (
             end
         end
     end
+
+    apu apu (
+        input wire clk,
+      input wire reset,
+      input wire snare_trigger,
+      input wire frame_end,
+      input wire [9:0] x,
+      input wire [9:0] y,
+      output reg sound
+
+        .clk(clk),
+        .reset(~rst_n),
+        .swordDragonCollision(SwordDragonCollision),
+        .frame_end(frame_end),
+        .x(pix_x),
+        .y(pix_y),
+        .sound(sound)
+    );
 
     // System IO Connections
     assign uio_oe  = 8'b0000_0011;
