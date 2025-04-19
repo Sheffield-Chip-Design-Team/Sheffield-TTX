@@ -271,14 +271,7 @@ module tt_um_Enjimneering_top (
     end
 
     apu apu (
-        input wire clk,
-      input wire reset,
-      input wire snare_trigger,
-      input wire frame_end,
-      input wire [9:0] x,
-      input wire [9:0] y,
-      output reg sound
-
+       
         .clk(clk),
         .reset(~rst_n),
         .swordDragonCollision(SwordDragonCollision),
