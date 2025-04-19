@@ -19,12 +19,15 @@ project:
   source_files:
     - "tt_um_Enjimneering_TTS.v"
     - "ControlInterface.v"
-    - "PlayerLogic.v"
-    - "DragonHead.v"
     - "DragonBody.v"
-    - "Sync.v"
+    - "DragonHead.v"
+    - "GameStateController.v"
     - "PPU.v"
+    - "PlayerLogic.v"
+    - "Sheep.v"
     - "SpriteROM.v"
+    - "Sync.v"
+    - "APU_top.v"
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs

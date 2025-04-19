@@ -39,7 +39,6 @@ module PictureProcessingUnit(
     input wire [17:0] dragon_4,
     input wire [17:0] dragon_5,
     input wire [17:0] dragon_6,
-    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -220,9 +219,6 @@ module PictureProcessingUnit(
                 4'd13: begin
                     general_Entity <= dragon_6;
                 end
-                4'd14: begin
-                    general_Entity <= dragon_7;
-                end
 
                 default: begin
                     general_Entity <= 18'b111111000000000000;
@@ -254,7 +250,7 @@ module PictureProcessingUnit(
 
     // Determine whether the difference between the entity pos and the current block pos is less than the required display length.
     assign range_H = (general_Entity[11:8] - local_Counter_H) < {1'b0,general_Entity[2:0]}; 
-    assign range_V = (local_Counter_V - general_Entity[7:4]) == 1'b0;
+    assign range_V = (local_Counter_V - general_Entity[7:4]) == 4'b0000;
     assign inRange = range_H && range_V;
 
 

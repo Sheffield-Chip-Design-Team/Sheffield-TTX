@@ -10,12 +10,11 @@
 module sheepLogic (
     input clk,
     input reset,
-    input trigger,
     input wire read_enable, // When high, generate random position for the sheep
     input wire [7:0] dragon_pos, // using as seed value to ensure no overlap
     input wire [7:0] player_pos, // using as seed value to ensure no overlap
     output reg [7:0] sheep_pos, // 8-bit position (4 bits for X, 4 bits for Y)
-    output reg [3:0] sheep_visible
+    output reg [3:0] sheep_sprite
 );
 
     wire [7:0] random_value; // 8-bit random value: first 4 bits -> X, last 4 bits -> Y
@@ -30,24 +29,24 @@ module sheepLogic (
     );
 
     always @(posedge clk) begin
-        if (reset) begin
-            // Reset condition: sheep is not visible and position off-screen
-            sheep_visible <= 0;
-            // sheep_pos <= 8'b0; // Initialize to 0 during reset
-        end else if (read_enable) begin
-            // Sheep becomes visible
-            sheep_visible <= 1; 
-            // Generate a valid position
-            // add masks to enforce limit
-            sheep_pos[7:4] <= random_value[7:4]; 
-            
-            // enforce limit 
-            if (random_value[3:0] > 11) begin // can probably be minimised
-                sheep_pos[3:0] <= ~random_value[3:0];
-            end else begin
-                sheep_pos[3:0] <= random_value[3:0];
-            end
+        if (~reset) begin
+            if (read_enable) begin
+                sheep_sprite <= 1; 
+                // Generate a valid position
+                // add masks to enforce limit
+                sheep_pos[7:4] <= random_value[7:4];
 
+                // enforce limit 
+                if (random_value[3:0] > 11) begin // can probably be minimised
+                    sheep_pos[3:0] <= ~random_value[3:0];
+                end else begin
+                    sheep_pos[3:0] <= random_value[3:0];
+                end
+            end
+        end else begin // reset signal
+            // Reset condition: sheep is not visible and position off-screen
+            sheep_sprite <= 0;
+            // sheep_pos <= 8'b0; // Initialize to 0 during reset
         end
     end
     /*
@@ -82,22 +81,20 @@ module sheepLogic (
 
     reg [2:0] counter;
 
-    always @(posedge clk or posedge reset) begin
-        
-        if (reset) begin // for when we need a new random immediately
-            rdm_num <= seed;  // Initialize value using the trigger
-            counter <= 7;     // Reset counter
-        
-        end else if (counter > 0) begin
-            // Shift and apply feedback for randomness
-            rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
-            rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
-            counter <= counter - 1;        // Decrement counter
+    always @(posedge clk) begin
+        if (~reset) begin 
+            if (counter > 0) begin
+                // Shift and apply feedback for randomness
+                rdm_num[6:0] <= rdm_num[7:1];  // Shift all bits
+                rdm_num[7] <= rdm_num[6] ^ rdm_num[5] ^ rdm_num[4]; // Feedback XOR for randomness
+                counter <= counter - 1;        // Decrement counter
+            end
 
-        end else begin
+        end else begin // reset behaviour
             counter <= 7;  // Reset counter for next random number
-            rdm_num <= seed;
+            rdm_num <= seed;     
         end
+            
     end
 
 endmodule
