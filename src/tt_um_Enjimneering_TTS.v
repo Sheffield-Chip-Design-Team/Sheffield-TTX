@@ -1,4 +1,5 @@
 
+
 /*
  * Copyright (c) 2024 Tiny Tapeout LTD
  * SPDX-License-Identifier: Apache-2.0
@@ -17,8 +18,7 @@
 //   `include "Sheep.v"
 //   `include "Sync.v"
 //   `include "PPU.v"
-//   `include "Heart.v"
-
+//   `include "APU_top.v"
 
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
@@ -32,7 +32,8 @@ module tt_um_Enjimneering_top (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n    // reset_n - low to reset   
+    input  wire       rst_n,    // reset_n - low to reset   
+    output wire [7:0] sound // sound output
 );
 
     //system signals
@@ -137,16 +138,11 @@ module tt_um_Enjimneering_top (
 
     wire [6:0] VisibleSegments;
 
-    reg ShDC_Delay;
-    reg SwDc_Delay;
-    always@(posedge clk) if(rst_n) ShDC_Delay <= SheepDragonCollision; else ShDC_Delay <= 0;
-    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision; else SwDc_Delay <= 0;
     DragonBody dragonBody(
 
         .clk(clk),
         .reset(~rst_n),
-        .heal(SheepDragonCollision & ~ShDC_Delay),
-        .hit(SwordDragonCollision & ~SwDc_Delay),
+        .lengthUpdate(2'b01),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
@@ -270,7 +266,7 @@ module tt_um_Enjimneering_top (
         end
     end
 
-    apu apu (
+apu apu (
        
         .clk(clk),
         .reset(~rst_n),
