@@ -26,7 +26,7 @@
     lfsr <= {lfsr[11:0], feedback};
   end
 
-  wire snare  = snare_active & noise & x< envelopeB*4;   // noise with half a second envelope
+  wire snare  = snare_active & noise & pix_x< envelopeB*4;   // noise with half a second envelope
   assign sound = {snare};
 
   reg prev_buttonPress = 0;
