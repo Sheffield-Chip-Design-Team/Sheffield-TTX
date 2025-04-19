@@ -48,7 +48,7 @@ always @(posedge clk) begin
     end
 
     // Count scanlines only if snare is active
-    if (snare_active && x == 0) begin
+    if (snare_active && pix_x == 0) begin
         line_counter <= line_counter + 1;
         if (line_counter >= 6000) begin
             snare_active <= 0;
@@ -64,12 +64,12 @@ end
   
     end else begin
 
-      if (x == 0 && y == 0) begin
+      if (pix_x == 0 && pix_y == 0) begin
         frame_counter <= frame_counter + `MUSIC_SPEED;
       end
 
       // noise
-      if (x == 0) begin
+      if (pix_x == 0) begin
         if (noise_counter > 1) begin 
           noise_counter <= 0;
           noise <= noise ^ noise_src;
