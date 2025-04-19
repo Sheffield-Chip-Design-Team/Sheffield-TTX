@@ -10,8 +10,8 @@
 
   `define MUSIC_SPEED   1'b1;  // for 60 FPS
 
-  reg [11:0] frame_counter;
-  wire [11:0] timer = frame_counter;
+  reg [3:0] frame_counter;
+  wire [3:0] timer = frame_counter;
   reg noise, noise_src = ^lfsr;
   reg [2:0] noise_counter;
 

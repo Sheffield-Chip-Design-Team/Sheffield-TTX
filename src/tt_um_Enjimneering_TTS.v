@@ -96,7 +96,7 @@ module tt_um_Enjimneering_top (
     wire [3:0] player_sprite;
 
     wire [7:0] sword_position; // sword position xxxx_yyyy
-    wire [3:0] sword_visible;
+    wire sword_visible;
     wire [1:0] sword_orientation;   // sword orientation 
 
     PlayerLogic playlogic(
@@ -189,7 +189,7 @@ module tt_um_Enjimneering_top (
         .clk_in         (clk),
         .reset          (~rst_n), 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
-        .entity_2       ({4'b0001, sword_orientation, sword_position, 3'b000,sword_visible[0]}),     // sword
+        .entity_2       ({4'b0001, sword_orientation, sword_position, 3'b000,sword_visible}),     // sword
         .entity_3       ({4'b0111, 2'b01, sheep_pos, 4'b0001}) ,                           // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
@@ -281,11 +281,11 @@ APU APU (
 
     // System IO Connections
     assign uio_oe  = 8'b1000_0011;
-    assign uio_out[7:0] = {sound,NES_Latch, NES_Clk , 4'b0};
+    assign uio_out[7:0] = {sound,NES_Latch, NES_Clk , 5'b0};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[7:2] = 0;
+    // assign uio_out[7:2] = 0;
     wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
     NES_Data, 
     SwordDragonCollision, 
