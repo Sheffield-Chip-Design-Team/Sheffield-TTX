@@ -266,7 +266,7 @@ module tt_um_Enjimneering_top (
         end
     end
 
-apu apu (
+APU APU (
        
         .clk(clk),
         .reset(~rst_n),
