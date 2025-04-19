@@ -32,8 +32,8 @@ module tt_um_Enjimneering_top (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n    // reset_n - low to reset   
-    // output wire [7:0] sound // sound output
+    input  wire       rst_n,    // reset_n - low to reset   
+    output wire [7:0] sound // sound output
 );
 
     //system signals
@@ -271,7 +271,7 @@ APU APU (
         .clk(clk),
         .reset(~rst_n),
         .snare_trigger(SwordDragonCollision),
-        .frame_end(frame_end),
+//        .frame_end(frame_end),
         .pix_x(pix_x),
         .pix_y(pix_y),
         .sound(sound)

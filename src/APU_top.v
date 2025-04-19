@@ -2,7 +2,7 @@
       input wire clk,
       input wire reset,
       input wire snare_trigger,
-      input wire frame_end,
+//      input wire frame_end,
       input wire [9:0] pix_x,
       input wire [9:0] pix_y,
       output reg sound
@@ -11,12 +11,12 @@
   `define MUSIC_SPEED   1'b1;  // for 60 FPS
 
   reg [11:0] frame_counter;
-  wire [12:0] timer = frame_counter;
+  wire [11:0] timer = frame_counter;
   reg noise, noise_src = ^lfsr;
   reg [2:0] noise_counter;
 
   // envelopes
-  wire [4:0] envelopeA = 5'd31 - timer[4:0];  // exp(t*-10) decays to 0 approximately in 32 frames  [255 215 181 153 129 109  92  77  65  55  46  39  33  28  23  20  16  14 12  10   8   7   6   5   4   3   3   2   2]
+//  wire [4:0] envelopeA = 5'd31 - timer[4:0];  // exp(t*-10) decays to 0 approximately in 32 frames  [255 215 181 153 129 109  92  77  65  55  46  39  33  28  23  20  16  14 12  10   8   7   6   5   4   3   3   2   2]
   wire [4:0] envelopeB = 5'd31 - timer[3:0]*2;// exp(t*-20) decays to 0 approximately in 16 frames  [255 181 129  92  65  46  33  23  16  12   8   6   4   3]
 
   // snare noise    
