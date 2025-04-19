@@ -270,10 +270,10 @@ APU APU (
        
         .clk(clk),
         .reset(~rst_n),
-        .swordDragonCollision(SwordDragonCollision),
+        .snare_trigger(SwordDragonCollision),
         .frame_end(frame_end),
-        .x(pix_x),
-        .y(pix_y),
+        .pix_x(pix_x),
+        .pix_y(pix_y),
         .sound(sound)
     );
 

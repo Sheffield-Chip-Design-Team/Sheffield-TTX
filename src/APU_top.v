@@ -3,8 +3,8 @@
       input wire reset,
       input wire snare_trigger,
       input wire frame_end,
-      input wire [9:0] x,
-      input wire [9:0] y,
+      input wire [9:0] pix_x,
+      input wire [9:0] pix_y,
       output reg sound
     );
 
