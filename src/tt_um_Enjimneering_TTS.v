@@ -32,14 +32,16 @@ module tt_um_Enjimneering_top (
     output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
     input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
-    input  wire       rst_n,    // reset_n - low to reset   
-    output wire [7:0] sound // sound output
+    input  wire       rst_n    // reset_n - low to reset   
+//    output wire [7:0] sound // sound output
 );
 
     //system signals
     wire NES_Clk;
     wire NES_Latch;
     wire NES_Data = 0;
+
+    wire sound;
 
     assign {NES_Latch,NES_Clk} = 2'b0;
 
@@ -278,8 +280,8 @@ APU APU (
     );
 
     // System IO Connections
-    assign uio_oe  = 8'b0000_0011;
-    assign uio_out[1:0] = {NES_Latch, NES_Clk};
+    assign uio_oe  = 8'b1000_0011;
+    assign uio_out[7:0] = {sound,NES_Latch, NES_Clk , 4'b0};
     assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
