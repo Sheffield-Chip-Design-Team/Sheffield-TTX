@@ -144,10 +144,10 @@ module Gamepad_Receiver (
         controller_clk_next   <= 1;  // controller_clk state
 
         // count 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // once 12 us passed
-        else if (count_reg == 600) begin
+        else if (count_reg == 300) begin
           controller_latch_next <= 0;  // deassert latch pin
           count_next <= 0;  // reset latch_count
           state_next <= 1;
@@ -157,16 +157,16 @@ module Gamepad_Receiver (
       1: begin
 
         // count clk cycles for 12 us
-        if (count_reg < 600) begin
+        if (count_reg < 300) begin
           count_next <= count_reg + 1;
         end
 
         // toggle controller_clk state every 6 us
-        if (count_reg <= 300) controller_clk_next <= 1;
+        if (count_reg <= 150) controller_clk_next <= 1;
 
-        else if (count_reg > 300) controller_clk_next <= 0;
+        else if (count_reg > 150) controller_clk_next <= 0;
 
-        if (count_reg == 300) begin
+        if (count_reg == 150) begin
           if (is_snes) begin
             B_next <= data;  // read B
           end else begin
@@ -175,7 +175,7 @@ module Gamepad_Receiver (
         end
 
         // once 12 us passed
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 2;
         end
@@ -184,16 +184,16 @@ module Gamepad_Receiver (
       2: begin
 
         // count clk cycles for 12 us
-        if (count_reg < 600) begin
+        if (count_reg < 300) begin
           count_next <= count_reg + 1;
         end
 
         // toggle controller_clk state every 6 us
-        if (count_reg <= 300) controller_clk_next <= 1;
+        if (count_reg <= 150) controller_clk_next <= 1;
 
-        else if (count_reg > 300) controller_clk_next <= 0;
+        else if (count_reg > 150) controller_clk_next <= 0;
 
-        if (count_reg == 300) begin
+        if (count_reg == 150) begin
           if (is_snes) begin
             Y_next <= data;  // read Y
           end else begin
@@ -202,7 +202,7 @@ module Gamepad_Receiver (
         end
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 3;  // go to read_select state
         end
@@ -211,17 +211,17 @@ module Gamepad_Receiver (
       3: begin
 
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) controller_clk_next <= 1;
-        else if (count_reg > 300) controller_clk_next <= 0;
+        if (count_reg <= 150) controller_clk_next <= 1;
+        else if (count_reg > 150) controller_clk_next <= 0;
 
         // read select
-        if (count_reg == 300) select_next <= data;
+        if (count_reg == 150) select_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 4;  // go to read_start state
         end
@@ -230,17 +230,17 @@ module Gamepad_Receiver (
 
       4: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) controller_clk_next <= 1;
-        else if (count_reg > 300) controller_clk_next <= 0;
+        if (count_reg <= 150) controller_clk_next <= 1;
+        else if (count_reg > 150) controller_clk_next <= 0;
 
         // read start
-        if (count_reg == 300) start_next <= data;
+        if (count_reg == 150) start_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 5;  // go to read_d_pad_up state
         end
@@ -248,17 +248,17 @@ module Gamepad_Receiver (
 
       5: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) controller_clk_next <= 1;
-        else if (count_reg > 300) controller_clk_next <= 0;
+        if (count_reg <= 150) controller_clk_next <= 1;
+        else if (count_reg > 150) controller_clk_next <= 0;
 
         // read d_pad_up
-        if (count_reg == 300) d_pad_up_next <= data;
+        if (count_reg == 150) d_pad_up_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 6;  // go to read_d_pad_down state
         end
@@ -266,20 +266,20 @@ module Gamepad_Receiver (
 
       6: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read d_pad_down
-        if (count_reg == 300) d_pad_down_next <= data;
+        if (count_reg == 150) d_pad_down_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 7;  // go to read_d_pad_left state
         end
@@ -287,20 +287,20 @@ module Gamepad_Receiver (
 
       7: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read d_pad_left
-        if (count_reg == 300) d_pad_left_next <= data;
+        if (count_reg == 150) d_pad_left_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 8;  // go to read_d_pad_right state
         end
@@ -309,22 +309,22 @@ module Gamepad_Receiver (
 
       8: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) begin
+        if (count_reg < 300) begin
           count_next <= count_reg + 1;
         end
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read d_pad_right
-        if (count_reg == 300) d_pad_right_next <= data;
+        if (count_reg == 150) d_pad_right_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           if (is_snes) begin
             state_next <= 9;
@@ -336,20 +336,20 @@ module Gamepad_Receiver (
 
       9: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read A
-        if (count_reg == 300) A_next <= data;
+        if (count_reg == 150) A_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 10;
         end
@@ -358,20 +358,20 @@ module Gamepad_Receiver (
 
       10: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read X
-        if (count_reg == 300) X_next <= data;
+        if (count_reg == 150) X_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 11;
         end
@@ -380,20 +380,20 @@ module Gamepad_Receiver (
 
       11: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read left
-        if (count_reg == 300) left_next <= data;
+        if (count_reg == 150) left_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 12;
         end
@@ -402,20 +402,20 @@ module Gamepad_Receiver (
 
       12: begin
         // count clk cycles for 12 us
-        if (count_reg < 600) count_next <= count_reg + 1;
+        if (count_reg < 300) count_next <= count_reg + 1;
 
         // controller_clk state
-        if (count_reg <= 300) begin
+        if (count_reg <= 150) begin
           controller_clk_next <= 1;
-        end else if (count_reg > 300) begin
+        end else if (count_reg > 150) begin
           controller_clk_next <= 0;
         end
 
         // read right
-        if (count_reg == 300) right_next <= data;
+        if (count_reg == 150) right_next <= data;
 
         // state over
-        if (count_reg == 600) begin
+        if (count_reg == 300) begin
           count_next <= 0;  // reset latch_count
           state_next <= 13;
         end
@@ -426,8 +426,8 @@ module Gamepad_Receiver (
         // count clk cycles for 48 us
         if (count_reg < 1800) count_next <= count_reg + 1;
 
-        // toggle controller_clk state every 6us (300 cycles)
-        if ((count_reg % 600) < 300) controller_clk_next <= 1;
+        // toggle controller_clk state every 6us (150 cycles)
+        if ((count_reg % 300) < 150) controller_clk_next <= 1;
         else controller_clk_next <= 0;
 
         // state over
