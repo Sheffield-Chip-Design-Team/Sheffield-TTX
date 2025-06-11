@@ -424,14 +424,14 @@ module Gamepad_Receiver (
 
       13: begin
         // count clk cycles for 48 us
-        if (count_reg < 1800) count_next <= count_reg + 1;
+        if (count_reg < 1200) count_next <= count_reg + 1;
 
         // toggle controller_clk state every 6us (150 cycles)
         if ((count_reg % 300) < 150) controller_clk_next <= 1;
         else controller_clk_next <= 0;
 
         // state over
-        if (count_reg == 1800) begin
+        if (count_reg == 1200) begin
           count_next <= 0;  // reset latch_count
           state_next <= latch_en;  // return to latch_en state
         end
