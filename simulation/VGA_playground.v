@@ -225,7 +225,9 @@ module tt_um_vga_example (
       .clk(clk),
       .reset(~rst_n),
       .frame_end(frame_end),
-      .snare_trigger(PlayerDragonCollision),
+      .PlayerDragonCollision(PlayerDragonCollision),
+      .SwordDragonCollision(SwordDragonCollision),
+      .SheepDragonCollision(SheepDragonCollision),
       .x(pix_x),
       .y(pix_y),
       .sound(sound)
@@ -1706,77 +1708,118 @@ module SpriteROM (
 
 
 
-    module APU (
+module APU (
       input wire clk,
       input wire reset,
-      input wire snare_trigger,
+      input wire SheepDragonCollision,
+      input wire SwordDragonCollision,
+      input wire PlayerDragonCollision,
       input wire frame_end,
       input wire [9:0] x,
       input wire [9:0] y,
-      output reg sound
-    );
+      output wire sound
+);
 
   `define MUSIC_SPEED   1'b1;  // for 60 FPS
 
   reg [11:0] frame_counter;
   wire [12:0] timer = frame_counter;
-  reg noise, noise_src = ^lfsr;
-  reg [2:0] noise_counter;
 
   // envelopes
-  wire [4:0] envelopeA = 5'd31 - timer[4:0];  // exp(t*-10) decays to 0 approximately in 32 frames  [255 215 181 153 129 109  92  77  65  55  46  39  33  28  23  20  16  14 12  10   8   7   6   5   4   3   3   2   2]
-  wire [4:0] envelopeB = 5'd31 - timer[3:0]*2;// exp(t*-20) decays to 0 approximately in 16 frames  [255 181 129  92  65  46  33  23  16  12   8   6   4   3]
+  wire [4:0] envelopeSheep  = 5'd31 - timer[4:0];        // exp(t*-10) decays to 0 approximately in 32 frames
+  wire [4:0] envelopeSword  = 5'd31 - timer[3:0]*2;      // exp(t*-20) decays to 0 approximately in 16 frames
+  wire [4:0] envelopePlayer = 5'd31 - timer[3:0];        // medium decay
 
-  // snare noise    
+  // snare noise - using linear feedback shift register  
+  reg noise;
+  reg noise_src;
+  reg [2:0] noise_counter;
   reg [12:0] lfsr;
+
   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
+ 
   always @(posedge clk) begin
     lfsr <= {lfsr[11:0], feedback};
+    noise_src <= lfsr;
   end
 
-  wire snare  = snare_active & noise & x< envelopeB*4;   // noise with half a second envelope
-  assign sound = {snare};
+  // Generate 3 independent SFX signals based on collisions and envelopes
+  wire sfx_sheep  = SheepSFX_active  & noise & x < envelopeSheep*4;
+  wire sfx_sword  = SwordSFX_active  & noise & x < envelopeSword*4;
+  wire sfx_player = PlayerSFX_active & noise & x < envelopePlayer*4;
 
-  reg prev_buttonPress = 0;
-  reg snare_start;
-  reg snare_active = 0;
+  // Edge detectors for each SFX trigger
+  reg prev_SheepDragonCollision  = 0;
+  reg prev_SwordDragonCollision  = 0;
+  reg prev_PlayerDragonCollision = 0;
 
-reg [14:0] line_counter = 0;  // Enough bits to count up to ~32k lines
+  // Active flags for each SFX
+  reg SheepSFX_active  = 0;
+  reg SwordSFX_active  = 0;
+  reg PlayerSFX_active = 0;
 
-always @(posedge clk) begin
-    // Detect rising edge of button
-    
-    prev_buttonPress <= snare_trigger & ~snare_active;
-    snare_start <= ~prev_buttonPress & snare_trigger;
+  // Line counters for each SFX duration (~32k lines possible)
+  reg [14:0] line_counter_sheep  = 0;
+  reg [14:0] line_counter_sword  = 0;
+  reg [14:0] line_counter_player = 0;
 
-    // Begin snare on button press
-    if (snare_start) begin
-        snare_active <= 1;
-        line_counter <= 0;
+  // Triggering SFX for Sheep
+  always @(posedge clk) begin
+    prev_SheepDragonCollision <= SheepDragonCollision & ~SheepSFX_active;
+    if (~prev_SheepDragonCollision & SheepDragonCollision) begin
+        SheepSFX_active <= 1;
+        line_counter_sheep <= 0;
     end
-
-    // Count scanlines only if snare is active
-    if (snare_active && x == 0) begin
-        line_counter <= line_counter + 1;
-        if (line_counter >= 6000) begin
-            snare_active <= 0;
+    if (SheepSFX_active && x == 0) begin
+        line_counter_sheep <= line_counter_sheep + 1;
+        if (line_counter_sheep >= 6000) begin
+            SheepSFX_active <= 0;
         end
     end
-end
+  end
 
+  // Triggering SFX for Sword
+  always @(posedge clk) begin
+    prev_SwordDragonCollision <= SwordDragonCollision & ~SwordSFX_active;
+    if (~prev_SwordDragonCollision & SwordDragonCollision) begin
+        SwordSFX_active <= 1;
+        line_counter_sword <= 0;
+    end
+    if (SwordSFX_active && x == 0) begin
+        line_counter_sword <= line_counter_sword + 1;
+        if (line_counter_sword >= 6000) begin
+            SwordSFX_active <= 0;
+        end
+    end
+  end
+
+  // Triggering SFX for Player
+  always @(posedge clk) begin
+    prev_PlayerDragonCollision <= PlayerDragonCollision & ~PlayerSFX_active;
+    if (~prev_PlayerDragonCollision & PlayerDragonCollision) begin
+        PlayerSFX_active <= 1;
+        line_counter_player <= 0;
+    end
+    if (PlayerSFX_active && x == 0) begin
+        line_counter_player <= line_counter_player + 1;
+        if (line_counter_player >= 6000) begin
+            PlayerSFX_active <= 0;
+        end
+    end
+  end
+
+  // SFX Timers  
   always @(posedge clk) begin
     if (reset) begin
       frame_counter <= 0;
       noise_counter <= 0;
       noise <= 0;
-  
     end else begin
-
+      // frame counter
       if (x == 0 && y == 0) begin
         frame_counter <= frame_counter + `MUSIC_SPEED;
       end
-
-      // noise
+      // noise timer
       if (x == 0) begin
         if (noise_counter > 1) begin 
           noise_counter <= 0;
@@ -1784,9 +1827,10 @@ end
         end else
           noise_counter <= noise_counter + 1'b1;
       end
-
     end
   end
 
-endmodule
+  // output
+  assign sound = sfx_sheep | sfx_sword | sfx_player;
 
+endmodule
