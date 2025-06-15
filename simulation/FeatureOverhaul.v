@@ -7,8 +7,6 @@
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-12 12:26:43.676128 
-// This is a test comment.
 
 // TT Pinout (standard for TT projects - can't change this)
 // GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
@@ -25,17 +23,20 @@ module tt_um_vga_example (
     input  wire       rst_n    // reset_n - low to reset   
 );
 
-    //system signals
+    // Controller signals
     wire NES_Clk;
     wire NES_Latch;
     wire NES_Data;
 
+    // NES Input Stub
     assign {NES_Latch,NES_Clk} = 2'b0;
 
-    // input signals
-    wire [9:0] input_data; // register to hold the 5 possible player actions
+    // Control signals to game logic
 
-    InputController ic(  // change these mappings to change the controls in the simulator
+    wire [9:0] input_data; // register to hold the 5 possible player actions
+    
+    // Bypass the reciver module (for simulation)
+    InputController ic(  
         .clk(clk),
         .reset(frame_end),
         .up(ui_in[0]),
@@ -46,15 +47,15 @@ module tt_um_vga_example (
         .control_state(input_data)
     );
 
-      wire PlayerDragonCollision;
-      wire SwordDragonCollision;
-      wire SheepDragonCollision;
-      
+    wire PlayerDragonCollision;
+    wire SwordDragonCollision;
+    wire SheepDragonCollision;
+    
     CollisionDetector collisionDetector (
         .clk(clk),
         .reset(vsync),
         .playerPos(player_pos),
-        .swordPos(sword_position),
+        .swordPos(sword_pos),
         .sheepPos(sheep_pos),
         .activeDragonSegments(VisibleSegments),
         .dragonSegmentPositions(
@@ -70,21 +71,20 @@ module tt_um_vga_example (
         .sheepDragonCollision(SheepDragonCollision)
     );
 
-      wire playerHurt;
+    wire playerHurt;
 
-      Hearts #(
+    Hearts #(
         .PlayerTolerance(1)
-      ) hearts (
+    ) hearts (
         .clk(clk),
         .vsync(vsync),
         .reset(~rst_n),
         .PlayerDragonCollision(PlayerDragonCollision),
         .PlayerHurt(playerHurt),
         .playerLives(playerLives)
-      );
+    );
 
-  
-    //player logic
+    // player logic
     wire [1:0] playerLives;
     wire [7:0] player_pos;   // player position xxxx_yyyy
     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
@@ -92,8 +92,8 @@ module tt_um_vga_example (
     wire [1:0] player_direction;   // player direction
     wire [3:0] player_sprite;
 
-    wire [7:0] sword_position; // sword position xxxx_yyyy
-    wire [3:0] sword_visible;
+    wire [7:0] sword_pos; // sword position xxxx_yyyy
+    wire [3:0] sword_sprite;
     wire [1:0] sword_orientation;   // sword orientation 
 
     PlayerLogic playlogic(
@@ -102,18 +102,17 @@ module tt_um_vga_example (
         .input_data(input_data),
         .trigger(frame_end),
 
+        .player_sprite(player_sprite),
         .player_pos(player_pos),
         .player_orientation(player_orientation),
         .player_direction(player_direction),
-        .player_sprite(player_sprite),
 
-        .sword_position(sword_position),
-        .sword_visible(sword_visible),
+        .sword_visible(sword_sprite),
+        .sword_position(sword_pos),
         .sword_orientation(sword_orientation)
     );
 
-
-    //dragon logic 
+    // dragon logic 
     wire [1:0] dragon_direction;
     wire [7:0] dragon_position;
     wire [5:0] movement_delay_counter;
@@ -154,6 +153,7 @@ module tt_um_vga_example (
     reg SwDc_Delay;
     always@(posedge clk) if(rst_n) ShDC_Delay <= SheepDragonCollision; else ShDC_Delay <= 0;
     always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision; else SwDc_Delay <= 0;
+    
     DragonBody dragonBody(
 
         .clk(clk),
@@ -175,43 +175,33 @@ module tt_um_vga_example (
     );
 
     // Picture Processing Unit
-   
-    // Entity input structure: ([17:14] entity ID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
-    // Set the entity ID to 4'1111 for unused channels.
-    // Set the array to 3'b000 for temporary disable channels.
-    // Sprite ID    -   0: Heart 1: Sword, 2: Gnome_Idle_1, 3: Gnome_Idle_2, 4: Dragon_Wing_Up,
-    //                  5: Dragon_Wing_Down, 6: Dragon_Head, 7: Sheep_Idle_1, 8: Sheep_Idle_2
-    // Orientation  -   0: Up, 1: right , 2: down, 3: left
-    // Location     -   8'bxxxx_yyyyy [xcoord (0-15), ycoord (0-11)]
-    // Flip bit     -   0 means not flipped, 1 means flipped.
-    // Array        -   repeat the tile x times in the orientation direction.
 
     PictureProcessingUnit ppu (
 
         .clk_in         (clk),
         .reset          (~rst_n), 
-        .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
-        .entity_2       ({sword_visible, sword_orientation, sword_position, 4'b0001}),     // sword
-        .entity_3       (18'b1111_11_1111_0000_0001),                                      // sheep
-        .entity_4       (18'b1111_11_1110_0000_0001),
-        .entity_5       (18'b1111_11_1101_0000_0001),
-        .entity_6       (18'b1111_11_1111_1111_0001),
-        .entity_7       ({14'b0000_00_1111_0000, 2'b00, playerLives}),                     // heart
-        .entity_8       (18'b1111_11_1111_1111_0001),
-        .dragon_1       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                    // dragon parts
-        .dragon_2       ({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  
-        .dragon_3       ({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
-        .dragon_4       ({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
-        .dragon_5       ({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
-        .dragon_6       ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),        
+        .entity_1       ({4'b0000, 2'b00, 8'b1111_0000, {2'b00, playerLives} }),           // heart
+        .entity_2       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
+        .entity_3       ({sword_sprite, sword_orientation, sword_pos, 4'b0001}),           // sword
+        .entity_4       (18'b1111_11_1111_1111_0001),         // sheep 
+        .entity_5       (18'b1111_11_1111_1111_0001),                                      // empty - sheep 2
+        .entity_6       (18'b1111_11_1111_1111_0001),                                      // empty
+        .entity_7       (18'b1111_11_1111_1111_0001),                                      // empty
+        .entity_8       (18'b1111_11_1111_1111_0001),                                      // empty
+        .entity_9       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                    // dragon parts
+        .entity_10      ({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  
+        .entity_11      ({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
+        .entity_12      ({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
+        .entity_13      ({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
+        .entity_14      ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}), 
+        .entity_15      ({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),        
         .counter_V      (pix_y),
         .counter_H      (pix_x),
-
-        .colour                  (pixel_value)
+        
+        .colour         (pixel_value)
     );
 
-
-   // display sync signals
+    // display sync signals
     wire hsync;
     wire vsync;
     wire video_active;
@@ -249,6 +239,7 @@ module tt_um_vga_example (
         B <= 0;
         
         end else begin
+            
             if (video_active) begin // display output color from Frame controller unit
 
                 if (PlayerDragonCollision == 0 & SwordDragonCollision == 0) begin // no collision - green
@@ -283,39 +274,32 @@ module tt_um_vga_example (
         end
     end
 
+    // Audio signals
+    wire sound;
+
+    AudioProcessingUnit apu( 
+      .clk(clk),
+      .reset(~rst_n),
+      .frame_end(frame_end),
+      .snare_trigger(PlayerDragonCollision),
+      .x(pix_x),
+      .y(pix_y),
+      .sound(sound)
+    );
+    
     // System IO Connections
-    assign uio_oe  = 8'b0000_0011;
-    assign uio_out[1:0] = {NES_Latch, NES_Clk};
-    assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
+    assign NES_Data = ui_in[0];
+    assign uio_oe   = 8'b1000_0011;
+    assign uio_out  = {sound, 5'b00000, NES_Latch, NES_Clk};
+    assign uo_out   = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in}; 
+    wire _unused_ok = &{ena, uio_in[7:1]}; 
 
 endmodule
 
-//================================================
-
-// Module : Input Collector
-// Author: James Adhie Kotey
-/* 
-
-    Last Updated: 02/01/2025 @ 19:00:14
-    Description:
-                takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
-
-    Control State Structure:
-                0: UP 
-                1: DOWN
-                2: LEFT
-                3: RIGHT
-                4: ACTION
-
-    
-*/
 
 module InputController (
-
     input wire clk,
     input wire reset,
     input wire up,            
@@ -325,8 +309,6 @@ module InputController (
     input wire attack,
     output reg [9:0] control_state  
 );
-    // control state is now  10 bits wide to include whether all buttons have been released
-    
     initial begin
         control_state = 0;
     end
@@ -358,23 +340,10 @@ module InputController (
     end
 
     always @(posedge clk) begin
-        
-        if (!reset) begin
-            control_state <= control_state | {pressed_buttons, released_buttons};
-        end
-
-        else  control_state <= 0;
+        if (!reset) control_state <= control_state | {pressed_buttons, released_buttons};
+        else control_state <= 0;
     end
-
-
 endmodule
-
-//================================================
-// Game control Unit
-// Last Updated: 31/01/2025 @ 16:23:52
-
-// Game control Unit
-// Last Updated: 31/01/2025 @ 16:23:52
 
 
 module CollisionDetector (
@@ -487,7 +456,6 @@ module CollisionDetector (
         end
 
     end
-
 endmodule
 
 module Comparator (
@@ -497,17 +465,10 @@ module Comparator (
 );
 
     assign out = (inA == inB);
-
 endmodule
 
-//===========
-// Module: Heart Logic
 
-//Hearts Module
-//Stores and decrements the value of player lives
-//Author: Rupert Bowen, 26/03/2025
-
-module Hearts #(parameter [6:0] PlayerTolerance = 60)( //add reset line
+module Hearts #(parameter [6:0] PlayerTolerance = 60)( 
     input clk,
     input reset,
     input vsync,
@@ -521,6 +482,7 @@ module Hearts #(parameter [6:0] PlayerTolerance = 60)( //add reset line
     initial begin
         playerLives <= 3;
     end
+    
     always @(posedge clk) begin
         
         PlayerHurt = 0;
@@ -556,20 +518,6 @@ module Hearts #(parameter [6:0] PlayerTolerance = 60)( //add reset line
     end
 endmodule
 
-
-
-
-// 
-//================================================
-// Module: Player Logic
-
-/*
-   Last Updated: 27/12/2024 @ 00:15:32
-   Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
-   Description:    
-        Player Logic FSM - movement and attack control. 
-        Collisions, lives and respawns managed centrally in the Game State Controller.
-*/
 
 module PlayerLogic (
 
@@ -815,11 +763,9 @@ module PlayerLogic (
       direction_stored <= 0;
     end
   end
-
 endmodule
 
 
-// ===========
 module DragonTarget(
       input wire clk,
       input wire reset,
@@ -828,9 +774,10 @@ module DragonTarget(
       input wire target_reached,
       input wire [7:0] player_pos, 
       input wire [7:0] sheep_pos,
-      output reg [7:0] target_pos
+      output wire [7:0] target_pos
 );
-
+    
+    reg [7:0] target_pos_reg;
     reg [2:0] DragonBehaviourState = 0;
     reg [2:0] NextDragonBehaviourState = 0;
 
@@ -847,52 +794,36 @@ module DragonTarget(
 
     end
 
-
     always @(posedge clk) begin
 
       case (DragonBehaviourState)
-        
         0: begin //chase the player
-          target_pos <= player_pos;
+          target_pos_reg <= player_pos;
           if (dragon_hurt | target_reached)  NextDragonBehaviourState <= 1; 
         end
 
         1: begin // chase the sheep
-          target_pos <= 8'b1111_1100;
+          target_pos_reg <= 8'b1111_1100;
           if (dragon_hurt | target_reached) NextDragonBehaviourState <= 2;
         end
 
         2: begin // retreat to the corner
-          target_pos <= 8'b0000_0000;
+          target_pos_reg <= 8'b0000_0000;
            if (target_reached) NextDragonBehaviourState <= 0;
         end
 
         default : begin 
-          target_pos <= player_pos;
+          target_pos_reg <= player_pos;
         end
-
       endcase
 
     end
 
+    assign target_pos = player_pos;
 endmodule
-//================================================
 
-// Module : Dragon Head
-// Author: Abdulatif Babli
-
-// changes: playerPos -> targetPos
-// 
-
-/* 
-    Description: 
-        The dragon head module contains the movement logic for the dragon's head. The body segments then move in turn
-        lagging behind the head.
-            
-*/
 
 module DragonHead (  
-
     input clk,
     input reset,
     input [7:0] targetPos,
@@ -980,46 +911,8 @@ module DragonHead (
             sy <= 0;
         end
     end
-
 endmodule
 
-//================================================
-
-// Module : Dragon Body
-// Author: Bowen Shi
-
-// Changes
-// renamed ports
-//  OrenPositrion -> Dragon_Head
-//  State
-/* 
-    Description:
-    The Dragon body segment 
-            
-*/
-
-
-// Module : Dragon Body
-// Author: Bowen Shi
-
-/* 
-    Description:
-    The Dragon body segment 
-            
-*/
-
-// Module : Dragon Body
-// Author: Bowen Shi
-
-// Changes
-// renamed ports
-//  OrenPositrion -> Dragon_Head
-//  State
-/* 
-    Description:
-    The Dragon body segment 
-            
-*/
 
 module DragonBody(
 
@@ -1040,7 +933,7 @@ module DragonBody(
     output reg [9:0] Dragon_7,
 
     output reg [6:0] Display_en
-    );
+);
 
     reg pre_vsync;
 
@@ -1089,25 +982,10 @@ module DragonBody(
             Display_en <= 7'b0000001;
         end
     end
-
 endmodule
 
-    
-//================================================
-// Module - Sync Unit Ouput Module 
-
-/*
-    Description: 
-            Generates sync pulses for VGA monitor, (H-SYNC ,V-SYNC) targeted to 640 * 480 output, 
-            Pixel coordinates for the graphics controller,
-            and sync signals for the game logic units.
-
-    Build Arguments
-        
-*/
 
 module sync_generator (  
-
     input              clk,
     input              reset,
     output reg         hsync,
@@ -1121,7 +999,6 @@ module sync_generator (
     
     reg [9:0] hpos = 0;
     reg [9:0] vpos = 0;
-
 
     // declarations for TV-simulator sync parameters
 
@@ -1184,38 +1061,8 @@ module sync_generator (
     assign display_on = (hpos < H_DISPLAY) && (vpos < V_DISPLAY);
     assign frame_end = hblanked && vblanked;
     assign input_enable = (hblanked && vpos < V_DISPLAY);
-
 endmodule
 
-//================================================
-// Module: Picture Processing Unit 
-// Last Updated: 15/01/2025 @ 03:50:41
-
-
-/* 
-    Description: 
-            This module takkes in entity information from the game logic and uses it to display sprites on screen 
-            with selected locations, and orientations. It can easily be adapted to provide more slots to store more 
-            entities or to repeat or flip tiles using the array or flipped slots.
-
-    General Entity Format: 
-            [13:10] Entity ID, 
-            [9:8] Orientation, 
-            [7:0] Location.
-
-    Array Entity Format:
-            [17:4] Same as before,
-            [3:0] number of tiles.
-//
-*/
-
-/*      
-    BUILD ARGS: 
-        -I SpriteROM.v 
-*/
-
-
-//entity input form: ([17:10] entity ID, [9:8] Orientation, [7:0] Location(tile)).
 
 module PictureProcessingUnit(
     input clk_in,
@@ -1226,17 +1073,15 @@ module PictureProcessingUnit(
     input wire [17:0] entity_4,
     input wire [17:0] entity_5,
     input wire [17:0] entity_6,
-    input wire [17:0] entity_7, //Array function enable
+    input wire [17:0] entity_7, 
     input wire [17:0] entity_8,
-    // input wire [13:0] entity_9,
-
-    input wire [17:0] dragon_1,
-    input wire [17:0] dragon_2,
-    input wire [17:0] dragon_3,
-    input wire [17:0] dragon_4,
-    input wire [17:0] dragon_5,
-    input wire [17:0] dragon_6,
-    input wire [17:0] dragon_7,
+    input wire [17:0] entity_9,
+    input wire [17:0] entity_10,
+    input wire [17:0] entity_11,
+    input wire [17:0] entity_12,
+    input wire [17:0] entity_13,
+    input wire [17:0] entity_14,
+    input wire [17:0] entity_15,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -1272,27 +1117,26 @@ module PictureProcessingUnit(
         if(!reset)begin
             
             previous_horizontal_pixel <= counter_H; // record previous x-pixel
-
+           
             if (previous_horizontal_pixel != counter_H ) begin
-
-                if(upscale_Counter_H != 4)begin
+                if (upscale_Counter_H != 4) begin
                     upscale_Counter_H <= upscale_Counter_H + 1;
                 end else begin
                     upscale_Counter_H <= 0;
                     column_Counter <= column_Counter + 1;
-                end 
+            end 
                                 
-                if (counter_H >= 40) begin
-                    if(column_Counter == 3'b111 && upscale_Counter_H == 4)begin
-                        horizontal_Tile_Counter <= horizontal_Tile_Counter + 1; // increment horizontal tile 
-                    end else begin
-                        horizontal_Tile_Counter <= horizontal_Tile_Counter;
-                    end
-                    end else begin
-                        horizontal_Tile_Counter <= 0;
-                    end
-
+            if (counter_H >= 40) begin
+                if (column_Counter == 3'b111 && upscale_Counter_H == 4)begin
+                    horizontal_Tile_Counter <= horizontal_Tile_Counter + 1; // increment horizontal tile 
+                end else begin
+                    horizontal_Tile_Counter <= horizontal_Tile_Counter;
+                end
             end else begin
+                horizontal_Tile_Counter <= 0; // reset horizontal tile counter
+            end
+
+            end else begin // keep counters the same
                 horizontal_Tile_Counter <= horizontal_Tile_Counter;
                 upscale_Counter_H <= upscale_Counter_H;
                 column_Counter <= column_Counter;
@@ -1301,6 +1145,7 @@ module PictureProcessingUnit(
             previous_vertical_pixel <= counter_V;  // record previous y-pixel
 
             if (previous_vertical_pixel != counter_V ) begin    // if pixel counter has incremented
+                
                 if(upscale_Counter_V != 4) begin                // Upscale every pixel 5x
                     upscale_Counter_V <= upscale_Counter_V + 1;
                 end else begin
@@ -1308,30 +1153,31 @@ module PictureProcessingUnit(
                     row_Counter <= row_Counter + 1;
                 end
 
-            if (counter_V >= 40) begin // increment the horizontal pixel after 8 upscaled pixels have been drawn in the vertical direction.
-                if(row_Counter == 3'b111 && upscale_Counter_V == 4 && vertical_Tile_Counter != 4'd11)begin // row 0-11
-                    vertical_Tile_Counter <= vertical_Tile_Counter + 1; // increment vertical tile 
-                end else if(row_Counter == 3'b111 && upscale_Counter_V == 4 && vertical_Tile_Counter == 4'd11) begin // final row of tiles
+                if (counter_V >= 40) begin // increment the horizontal pixel after 8 upscaled pixels have been drawn in the vertical direction.
+                    if(row_Counter == 3'b111 && upscale_Counter_V == 4 && vertical_Tile_Counter != 4'd11)begin // row 0-11
+                        vertical_Tile_Counter <= vertical_Tile_Counter + 1; // increment vertical tile 
+                    end else if(row_Counter == 3'b111 && upscale_Counter_V == 4 && vertical_Tile_Counter == 4'd11) begin // final row of tiles
+                        vertical_Tile_Counter <= 0;
+                    end else begin
+                        vertical_Tile_Counter <= vertical_Tile_Counter;
+                    end          
+                end else begin
                     vertical_Tile_Counter <= 0;
-                end else begin
-                    vertical_Tile_Counter <= vertical_Tile_Counter;
-                end 
-                end else begin
-                     vertical_Tile_Counter <= 0;
                 end
-            end else begin // if the row counter hasn't updated
+                    
+            end else begin // keep counters the same
                     vertical_Tile_Counter <= vertical_Tile_Counter;
                     upscale_Counter_V <= upscale_Counter_V;
                     row_Counter <= row_Counter;
             end
 
-        end else begin // reset all counters on reset
-
+        end else begin // reset all counters 
+            // horizontal
             previous_horizontal_pixel <= 0;
             column_Counter <= 0; 
             upscale_Counter_H <= 0;
             horizontal_Tile_Counter <= 4'b0000;
-
+            //vertical
             previous_vertical_pixel <= 0;
             row_Counter <= 0;
             upscale_Counter_V <= 0;
@@ -1344,21 +1190,23 @@ module PictureProcessingUnit(
     always@(posedge clk) begin  
         
         if (!reset) begin
-            
-            local_Counter_H <= horizontal_Tile_Counter + 1;       // works as the width of the screen is 16 tiles - uses the overflow of 4-bit counrter as the reset.
 
-            if(row_Counter == 3'b111 && upscale_Counter_H == 4 && horizontal_Tile_Counter == 15 && column_Counter == 7 && upscale_Counter_H == 4) begin // if at the end of a row
-                if(vertical_Tile_Counter != 4'b1011) begin        // if not on final tile in the column
-                    local_Counter_V <= vertical_Tile_Counter + 1; // increment the vertical tile counter
+            local_Counter_H <= horizontal_Tile_Counter + 1;        // works as the width of the screen is 16 tiles - uses the overflow of 4-bit counrter as the reset.
+
+            if (row_Counter == 3'b111 && upscale_Counter_H == 4 && horizontal_Tile_Counter == 15 && column_Counter == 7 && upscale_Counter_H == 4) begin // if at the end of a row
+                if (vertical_Tile_Counter != 4'b1011) begin        // if not on final tile in the column
+                    local_Counter_V <= vertical_Tile_Counter + 1;  // increment the vertical tile counter
                 end else begin
-                    local_Counter_V <= 0;                         // wrap round back to the top of the screen 
+                    local_Counter_V <= 0;                          // wrap round back to the top of the screen 
                 end
+
             end else begin
                 local_Counter_V <= vertical_Tile_Counter;
             end
+
         end 
 
-        else begin 
+        else begin  // reset condition
             local_Counter_H <= 0;
             local_Counter_V <= 0;
         end
@@ -1371,10 +1219,12 @@ module PictureProcessingUnit(
     wire new_tile = next_tile != current_tile;
 
     // Cycling through the entity slots - loading the data into the general entity register 
+    
+    // TODO: Check the order of the enitity assignments
     always@(posedge clk) begin 
         
         if (!reset) begin
-            case (entity_Counter)
+             case (entity_Counter)
                 4'd0: begin 
                     general_Entity <= entity_8; 
                     end
@@ -1400,25 +1250,25 @@ module PictureProcessingUnit(
                     general_Entity <= entity_1;
                 end
                 4'd8: begin
-                    general_Entity <= dragon_1;
+                    general_Entity <= entity_9;
                 end
                 4'd9: begin
-                    general_Entity <= dragon_2;
+                    general_Entity <= entity_10;
                 end
                 4'd10: begin
-                    general_Entity <= dragon_3;
+                    general_Entity <= entity_11;
                 end
                 4'd11: begin
-                    general_Entity <= dragon_4;
+                    general_Entity <= entity_12;
                 end
                 4'd12: begin
-                    general_Entity <= dragon_5;
+                    general_Entity <= entity_13;
                 end
                 4'd13: begin
-                    general_Entity <= dragon_6;
+                    general_Entity <= entity_14;
                 end
                 4'd14: begin
-                    general_Entity <= dragon_7;
+                    general_Entity <= entity_15;
                 end
 
                 default: begin
@@ -1454,7 +1304,6 @@ module PictureProcessingUnit(
     assign range_V = (local_Counter_V - general_Entity[7:4]) == 1'b0;
     assign inRange = range_H && range_V;
 
-
     //These registers are used to address the ROM.
     reg [8:0] detector;    // Data Format: [8:6] Row number, [5:2] Entity ID, [1:0] Orientation  
     reg [8:0] out_entity;  
@@ -1468,15 +1317,13 @@ module PictureProcessingUnit(
             if (!(column_Counter == 7 && upscale_Counter_H == 3))begin
 
                 out_entity <= out_entity;
-                
+        
                 if (inRange && (general_Entity[17:14] != 4'b1111)) begin
-
                     if (general_Entity[3] == 1'b1) begin
                         detector <= {~(row_Counter), general_Entity[17:12]};
                     end else begin
                         detector <= {(row_Counter), general_Entity[17:12]};
                     end
-
                 end else begin
                     detector <= detector;
                 end
@@ -1505,7 +1352,6 @@ module PictureProcessingUnit(
         .data(buffer)
     );
 
-    
     // Send the appropriate pixel value to the VGA output unit 
     always@(posedge clk)begin 
        
@@ -1516,61 +1362,14 @@ module PictureProcessingUnit(
         end
         
     end
-
 endmodule
 
-
-//================================================
-
-// Module: SpriteROM 
-
-/*  Description: The Sprite ROM stores all of the graphicval information in the game using a bitmap.
-                 it outputs an 1 * 8 cross-sectional slice of the currently displayed sprite that needs to be 
-                 displayed on the current tile. Depending on the oriAentation bits it will return a different, 
-                 slice, rotating or flipping  the image as appropriate.
-
-    Sprite List:
-
-                0: Heart
-                1: Sword
-                2: Gnome_Idle_1
-                3: Gnome_Idle_2
-                4: Dragon_Wing_Up
-                5: Dragon_Wing_Down
-                6: Dragon_Head
-                7: Sheep_Idle_1
-                8: Sheep_Idle_2
-
-    Orientation Selection:
-
-                The ROM Can be read from in four differernt ways in order to output the imagine in a different orientations.
-
-                UP    = 0  - No change
-                RIGHT = 1  - Rotated 90 Degrees clockwise around the centre.
-                DOWN  = 2  - Reflected 180 Degrees.
-                LEFT  = 3  - Rotated 90 Degrees clockwise around the centre, then reflected on the line x = 0
-                
-
-    Sprite Storage:
-
-                The sprite is stored using an active low binary bitmap.
-                0 = Pixel_ON
-                1 = Pixel_OFF
-    
-    Last Updated: 30/11/2024 @ 21:05:21
-    
-*/
-
-
-module SpriteROM (
-    
+module SpriteROM ( 
     input            clk,
     input            reset,
-    // input wire       read_enable,
     input [1:0] orientation,
     input [3:0] sprite_ID,
     input [2:0] line_index,
-    
     output reg [7:0] data
 );
 
@@ -1582,20 +1381,7 @@ module SpriteROM (
     // assign read_enable = 1'b1;
 
     reg [7:0] romData [71:0];   
-    /*
 
-        romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
-        romData[1] = 8'b1_111111_1;
-        romData[2] = 8'b1_101011_1;
-        romData[3] = 8'b1_000101_1;
-        romData[4] = 8'b1_000001_1;
-        romData[5] = 8'b1_100011_1;
-        romData[6] = 8'b1_110111_1;
-        romData[7] = 8'b1_111111_1;
-
-
-
-    */
     initial begin
 
         romData[0] = 8'b1_111111_1; // 0000 Heart (6x6)
@@ -1739,5 +1525,87 @@ module SpriteROM (
             end
 
         end
+endmodule
 
-    endmodule
+
+module AudioProcessingUnit (
+      input wire clk,
+      input wire reset,
+      input wire snare_trigger,
+      input wire frame_end,
+      input wire [9:0] x,
+      input wire [9:0] y,
+      output wire sound
+);
+
+  `define MUSIC_SPEED   1'b1;  // for 60 FPS
+
+  reg [11:0] frame_counter;
+  wire [12:0] timer = frame_counter;
+
+  // envelopes
+  wire [4:0] envelopeA = 5'd31 - timer[4:0];  // exp(t*-10) decays to 0 approximately in 32 frames  [255 215 181 153 129 109  92  77  65  55  46  39  33  28  23  20  16  14 12  10   8   7   6   5   4   3   3   2   2]
+  wire [4:0] envelopeB = 5'd31 - timer[3:0]*2;// exp(t*-20) decays to 0 approximately in 16 frames  [255 181 129  92  65  46  33  23  16  12   8   6   4   3]
+    
+  // snare noise - using linear feedback shift register  
+  reg noise;
+  reg noise_src;
+  reg [2:0] noise_counter;
+  reg [12:0] lfsr;
+  
+  wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
+  always @(posedge clk) begin
+    lfsr <= {lfsr[11:0], feedback};
+    noise_src <= lfsr;
+  end
+
+  wire snare  = snare_active & noise & x < envelopeB*4;   // noise with half a second envelope
+
+  reg prev_snare_trigger = 0;
+  reg snare_start;
+  reg snare_active = 0;
+
+  reg [14:0] line_counter = 0;  // Enough bits to count up to ~32k lines
+ 
+  // Triggering SFX
+  always @(posedge clk) begin // triggering SFX
+        prev_snare_trigger <= snare_trigger & ~snare_active;
+        snare_start <= ~prev_snare_trigger & snare_trigger;
+        if (snare_start & ~snare_active) begin
+            snare_active <= 1;
+            line_counter <= 0;
+        end
+        // Count scanlines only if snare is active
+        if (snare_active && x == 0) begin
+            line_counter <= line_counter + 1;
+            if (line_counter >= 6000) begin
+                snare_active <= 0;
+            end
+        end
+  end
+  
+  // SFX Timers  
+  always @(posedge clk) begin
+    if (reset) begin
+      frame_counter <= 0;
+      noise_counter <= 0;
+      noise <= 0;
+    end else begin
+      // frame counter
+      if (x == 0 && y == 0) begin
+        frame_counter <= frame_counter + `MUSIC_SPEED;
+      end
+      // noise timer
+      if (x == 0) begin
+        if (noise_counter > 1) begin 
+          noise_counter <= 0;
+          noise <= noise ^ noise_src;
+        end else
+          noise_counter <= noise_counter + 1'b1;
+      end
+    end
+  end
+
+  // output
+  assign sound = {snare};
+endmodule
