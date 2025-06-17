@@ -1,8 +1,5 @@
-
 // Module : Dragon Head
 // Author: Abdulatif Babli
-
-
 /* 
     Description: 
         The dragon head module contains the movement logic for the dragon's head. The body segments then move in turn

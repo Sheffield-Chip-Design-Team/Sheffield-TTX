@@ -1,5 +1,8 @@
 // Module: Picture Processing Unit 
-// Last Updated: 15/01/2025 @ 03:50:41
+// Author: Bowen Shi
+// Last Updated: 19:37 16/06/2025 
+
+// NOTE: Version in simulation has different port names (entity slots)
 
 // `include SpriteROM.v
 
@@ -39,6 +42,7 @@ module PictureProcessingUnit(
     input wire [17:0] dragon_4,
     input wire [17:0] dragon_5,
     input wire [17:0] dragon_6,
+    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -218,6 +222,9 @@ module PictureProcessingUnit(
                 end
                 4'd13: begin
                     general_Entity <= dragon_6;
+                end
+                4'd14: begin
+                    general_Entity <= dragon_7;
                 end
 
                 default: begin
