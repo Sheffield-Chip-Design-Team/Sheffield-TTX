@@ -43,7 +43,6 @@ jobs:
           vcds=$(find test -type f -name '*.vcd' | paste -sd "," -)
           echo "vcds=$vcds" >> $GITHUB_OUTPUT
      
-
       - name: Test Summary
         uses: test-summary/action@v2.3
         with:
@@ -58,3 +57,10 @@ jobs:
           path: |
             ${{ steps.find_waveforms.outputs.vcds }}
             ${{ steps.find_results.outputs.results }}
+
+      - name: Report Test Status
+        run: |
+          if grep failure $(find . -type f -name '*_results.xml'); then
+            echo "Test failure detected!"
+            exit 1
+          fi
