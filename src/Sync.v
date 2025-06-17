@@ -1,9 +1,10 @@
 // Module - Sync Unit Ouput Module 
+// Adapted from hv_sync_generator from VGAsimulator demo
 
 /*
     Description: 
             Generates sync pulses for VGA monitor, (H-SYNC ,V-SYNC) targeted to 640 * 480 output, 
-            Pixel coordinates for the graphics controller,
+            Pixel coordinates for the graphics controller,§
             and sync signals for the game logic units.
 
     Build Arguments
@@ -64,29 +65,45 @@ module sync_generator (
     // horizontal position counter
 
     always @(posedge clk) begin
-        hsync <= (hpos >= H_SYNC_START && hpos <= H_SYNC_END);
-        if (hmaxxed) begin
-        hpos <= 0;
-        end else begin
-        hpos <= hpos + 1;
+
+        if (reset) begin
+            hpos <= 0;
+            hsync <= 1;
+        end 
+
+        else begin
+            hsync <= (hpos >= H_SYNC_START && hpos <= H_SYNC_END);
+            if (hmaxxed) begin
+            hpos <= 0;
+            end else begin
+            hpos <= hpos + 1;
+            end
         end
     end
 
     // vertical position counter
 
     always @(posedge clk) begin
-        vsync <= (vpos >= V_SYNC_START && vpos <= V_SYNC_END);
-        if (hmaxxed)
-        if (vmaxxed) begin
-        vpos <= 0;
-        end else begin
-            vpos <= vpos + 1;
+
+        if (reset) begin
+            vpos <= 0;
+            vsync <= 1;
+        end
+        
+        else begin
+            vsync <= (vpos >= V_SYNC_START && vpos <= V_SYNC_END);
+            if (hmaxxed)
+            if (vmaxxed) begin
+            vpos <= 0;
+            end else begin
+                vpos <= vpos + 1;
+            end
         end
     end
 
     // display_on is set when beam is in "safe" visible frame
     assign display_on = (hpos < H_DISPLAY) && (vpos < V_DISPLAY);
     assign frame_end = hblanked && vblanked;
-    assign input_enable = (hblanked && vpos < V_DISPLAY);
+    assign input_enable = 1; //(hblanked && vpos < V_DISPLAY);
 
 endmodule
