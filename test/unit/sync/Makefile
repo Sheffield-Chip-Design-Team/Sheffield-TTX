@@ -29,5 +29,7 @@ MODULE=test_sync
 
 # $(info VERILOG_SOURCES: $(VERILOG_SOURCES))
 
+export COCOTB_RESULTS_FILE=$(TOPLEVEL)_results.xml
+
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

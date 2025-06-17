@@ -52,13 +52,6 @@ $(info TEST LOCATIONS = '$(TESTS)')
 
 #  RUN TESTS  #
 
-# Run all tests (clean)
-.PHONY: clean
-clean:
-	@for d in $(TESTS); do \
-	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
-	done
-
 .PHONY: $(TEST_DIRS) all
 
 # Run all tests (ignore errors)
@@ -67,6 +60,14 @@ $(TEST_DIRS):
 
 # Default target = run all chosen tests
 all: $(TESTS) 
+
+
+# clean all tests
+.PHONY: clean
+clean:
+	@for d in $(TESTS); do \
+	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
+	done
 
 else
 
