@@ -3,7 +3,7 @@
 
 /* 
   Note:
-    This 'testbench' just instantiates the module and makes some convenient
+    This wrapper just instantiates the module and makes some convenient
     wires that can be driven / tested by the cocotb python testbench.
 */
 
@@ -25,7 +25,7 @@ module sync_tb ();
         .display_on(video_active),
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
-        .frame_end(frame_end),
+        .frame_end(frame_end)
         // .input_enable(enable_input)
     );
 

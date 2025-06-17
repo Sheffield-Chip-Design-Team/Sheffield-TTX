@@ -27,7 +27,6 @@ module sync_generator (
     reg [9:0] hpos = 0;
     reg [9:0] vpos = 0;
 
-
     // declarations for TV-simulator sync parameters
 
     // horizontal constants
@@ -68,7 +67,7 @@ module sync_generator (
 
         if (reset) begin
             hpos <= 0;
-            hsync <= 1;
+            hsync <= 0; // active high pulse
         end 
 
         else begin
@@ -87,7 +86,7 @@ module sync_generator (
 
         if (reset) begin
             vpos <= 0;
-            vsync <= 1;
+            vsync <= 0;  // active high pulse
         end
         
         else begin
