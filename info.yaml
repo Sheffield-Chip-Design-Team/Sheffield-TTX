@@ -1,11 +1,11 @@
 # Tiny Tapeout project information
 project:
-  title:        "The Tiny Tapestation"      # Project title
-  author:       "SHARC"      # Your name
-  discord:      "captainmcnugget_"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
+  title:        "The Tiny Tapestation"                            # Project title
+  author:       "Sheffield Hardware and Reconfigurable Computing" # Your name
+  discord:      "captainmcnugget_"          # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "The Tiny Tapestation"      # One line description of what your project does
-  language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
+  language:     "Verilog"                   # other examples include SystemVerilog, Amaranth, VHDL, etc
+  clock_hz:     50000000                 # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
   tiles: "1x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
@@ -18,14 +18,16 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "tt_um_Enjimneering_TTS.v"
+    - "SNESReciever.v"
     - "ControlInterface.v"
+    - "CollisionDetector.v"
+    - "Heart.v"
+    - "Player.v"
     - "DragonBody.v"
     - "DragonHead.v"
-    - "GameStateController.v"
-    - "PPU.v"
-    - "PlayerLogic.v"
-    - "Sheep.v"
     - "SpriteROM.v"
+    - "PPU.v"
+    - "APU.v"
     - "Sync.v"
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
@@ -40,14 +42,14 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: "VGA"
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "hsync"
+  uo[1]: "blue[1]"
+  uo[2]: "green[1]"
+  uo[3]: "red[1]"
+  uo[4]: "vsync"
+  uo[5]: "blue[0]"
+  uo[6]: "green[0]"
+  uo[7]: "red[0]"
 
   # Bidirectional pins
   uio[0]: "NES Latch"
@@ -57,7 +59,7 @@ pinout:
   uio[4]: ""
   uio[5]: ""
   uio[6]: ""
-  uio[7]: ""
+  uio[7]: "PWM Audio Out"
 
 # Do not change!
 yaml_version: 6
