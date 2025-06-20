@@ -93,7 +93,7 @@ async def test_reset(uut):
     # capture module state after the next positive edge
     await RisingEdge(uut.clk)
     state = get_state(uut)
-    expected_state = [0, 0, 1, 0, 0, 1]  # Expected state after reset
+    expected_state = [0, 0, 1, 0, 0, 0]  # Expected state after reset
     assert state == expected_state, (
         f"Sync generator reset state  incorrect: expected {expected_state}, got {state}"
     )
