@@ -1,5 +1,5 @@
 
-module APU (
+module AudioProcessingUnit (
       input wire clk,
       input wire reset,
       input wire snare_trigger,
@@ -8,7 +8,6 @@ module APU (
       input wire [9:0] y,
       output wire sound
 );
-
 
   `define MUSIC_SPEED   1'b1;  // for 60 FPS
 
@@ -20,20 +19,18 @@ module APU (
   wire [4:0] envelopeB = 5'd31 - timer[3:0]*2;// exp(t*-20) decays to 0 approximately in 16 frames  [255 181 129  92  65  46  33  23  16  12   8   6   4   3]
     
   // snare noise - using linear feedback shift register  
-  
   reg noise;
   reg noise_src;
   reg [2:0] noise_counter;
   reg [12:0] lfsr;
   
   wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
- 
- always @(posedge clk) begin
+  always @(posedge clk) begin
     lfsr <= {lfsr[11:0], feedback};
     noise_src <= lfsr;
   end
 
-  wire snare  = snare_active & noise & x< envelopeB*4;   // noise with half a second envelope
+  wire snare  = snare_active & noise & x < envelopeB*4;   // noise with half a second envelope
 
   reg prev_snare_trigger = 0;
   reg snare_start;
@@ -45,7 +42,7 @@ module APU (
   always @(posedge clk) begin // triggering SFX
         prev_snare_trigger <= snare_trigger & ~snare_active;
         snare_start <= ~prev_snare_trigger & snare_trigger;
-        if (snare_start) begin
+        if (snare_start & ~snare_active) begin
             snare_active <= 1;
             line_counter <= 0;
         end
@@ -82,7 +79,4 @@ module APU (
 
   // output
   assign sound = {snare};
-
 endmodule
-
-

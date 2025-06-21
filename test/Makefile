@@ -59,7 +59,15 @@ $(TEST_DIRS):
 	-$(MAKE) -C $(TEST_DIR)/$@ 
 
 # Default target = run all chosen tests
-all: $(TESTS)
+all: $(TESTS) 
+
+
+# clean all tests
+.PHONY: clean
+clean:
+	@for d in $(TESTS); do \
+	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
+	done
 
 else
 
@@ -77,5 +85,4 @@ VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_f
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
 endif
-
 

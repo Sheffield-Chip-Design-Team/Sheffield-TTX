@@ -8,19 +8,6 @@
             
 */
 
-// Module : Dragon Body
-// Author: Bowen Shi
-
-// Changes
-// renamed ports
-//  OrenPositrion -> Dragon_Head
-//  State
-/* 
-    Description:
-    The Dragon body segment 
-            
-*/
-
 module DragonBody(
 
     input clk,

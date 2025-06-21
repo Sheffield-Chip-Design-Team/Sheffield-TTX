@@ -1,11 +1,11 @@
 
 // Module : Input Collector
-// Author: James Adhie Kotey
+// Author: James Ashie Kotey
 /* 
-
-    Last Updated: 02/01/2025 @ 19:00:14
+    Last Updated: 16:21 16/06/2025 
+    
     Description:
-                takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
+        takes input signals from the controller/simulators and outputs 1 on each button state when a button has been pressed or released.
 
     Control State Structure:
                 0: UP 
@@ -14,10 +14,9 @@
                 3: RIGHT
                 4: ACTION
 
-    
 */
 
-module InputController (
+module InputCollector (
 
     input wire clk,
     input wire reset,
