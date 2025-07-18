@@ -27,9 +27,12 @@ export PROJECT_SOURCES
 # ============== Testing ================= #
 
 # if NOT a Gate Level Test
-ifneq ($(GATES),yes) 
+ifneq ($(GATES), yes) 
 
-# RTL simulation
+
+
+
+# RTL Unit test simulation
 
 SIM_BUILD		    = sim_build/rtl
 COMPILE_ARGS 		+= -I$(SRC_DIR)
@@ -37,6 +40,9 @@ COMPILE_ARGS 		+= -I$(SRC_DIR)
 export SIM_BUILD
 export VERILOG_SOURCES
 export COMPILE_ARGS
+
+# if the unit test flag is set
+ifneq ($(UNIT), no)
 
 # DISCOVER TESTS #
 
@@ -61,13 +67,20 @@ $(TEST_DIRS):
 # Default target = run all chosen tests
 all: $(TESTS) 
 
-
 # clean all tests
 .PHONY: clean
 clean:
 	@for d in $(TESTS); do \
 	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
 	done
+	
+else
+
+
+
+
+
+
 
 else
 

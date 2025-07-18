@@ -1,21 +1,29 @@
-# Sample testbench for a Tiny Tapeout project
+# TinyTapestaton CI Test Flow
 
-This is a sample testbench for a Tiny Tapeout project. It uses [cocotb](https://docs.cocotb.org/en/stable/) to drive the DUT and check the outputs.
+This project uses an automating testing flow powered by [cocotb](https://docs.cocotb.org/en/stable/) to drive the modules and check their outputs.
+
 See below to get started or for more information, check the [website](https://tinytapeout.com/hdl/testing/).
 
-## Setting up
+## Writing Unit Tests
 
-1. Edit [Makefile](Makefile) and modify `PROJECT_SOURCES` to point to your Verilog files.
-2. Edit [tb.v](tb.v) and replace `tt_um_example` with your module name.
+1. Copy the test teamplate folder nito the unit folder
+2. Edit the filenames, and module names to fit the module you are testing
+3. Populate the wrapper
+4. Write your tests in the python module.
 
 ## How to run
 
-To run the RTL simulation:
+To run the RTL Top level tests simulation:
 
 ```sh
-make -B
+make -B 
 ```
 
+To run the RTL Unit test simulation:
+
+```sh
+make -B UNIT=yes
+```
 To run gatelevel simulation, first harden your project and copy `../runs/wokwi/results/final/verilog/gl/{your_module_name}.v` to `gate_level_netlist.v`.
 
 Then run:
@@ -29,3 +37,4 @@ make -B GATES=yes
 ```sh
 gtkwave tb.vcd tb.gtkw
 ```
+Or ... open the file in the Surfer VSCode Extension.

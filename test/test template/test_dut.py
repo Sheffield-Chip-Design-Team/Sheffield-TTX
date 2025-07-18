@@ -50,7 +50,6 @@ def get_state(uut) -> list[int]:
     ]
 
 # Reset Tests
-
 @cocotb.test()
 async def test_reset(uut):
     
