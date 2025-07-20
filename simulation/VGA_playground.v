@@ -1706,131 +1706,237 @@ module SpriteROM (
 
     endmodule
 
-
-
 module APU (
-      input wire clk,
-      input wire reset,
-      input wire SheepDragonCollision,
-      input wire SwordDragonCollision,
-      input wire PlayerDragonCollision,
-      input wire frame_end,
-      input wire [9:0] x,
-      input wire [9:0] y,
-      output wire sound
+    input wire clk,
+    input wire reset,
+    input wire SheepDragonCollision,
+    input wire SwordDragonCollision,
+    input wire PlayerDragonCollision,
+    input wire frame_end,
+    input wire [9:0] x,
+    input wire [9:0] y,
+    output wire sound
 );
 
-  `define MUSIC_SPEED   1'b1;  // for 60 FPS
+//-------------------------------------------//
+// Global frame counter (for melody timing)
+//-------------------------------------------//
+reg [11:0] frame_counter;
+always @(posedge clk) begin
+    if (reset)
+        frame_counter <= 0;
+    else if (x == 0 && y == 0)
+        frame_counter <= frame_counter + 1;
+end
 
-  reg [11:0] frame_counter;
-  wire [12:0] timer = frame_counter;
+//-------------------------------------------//
+// SFX 1: Dragon Eating Sheep (low rumble)
+//-------------------------------------------//
+reg dragon_active, dragon_cooldown;
+reg [15:0] dragon_counter;
+reg dragon_square;
+reg [30:0] dragon_duration, dragon_cooldown_timer;
 
-  // envelopes
-  wire [4:0] envelopeSheep  = 5'd31 - timer[4:0];        // exp(t*-10) decays to 0 approximately in 32 frames
-  wire [4:0] envelopeSword  = 5'd31 - timer[3:0]*2;      // exp(t*-20) decays to 0 approximately in 16 frames
-  wire [4:0] envelopePlayer = 5'd31 - timer[3:0];        // medium decay
-
-  // snare noise - using linear feedback shift register  
-  reg noise;
-  reg noise_src;
-  reg [2:0] noise_counter;
-  reg [12:0] lfsr;
-
-  wire feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0] + 1;
- 
-  always @(posedge clk) begin
-    lfsr <= {lfsr[11:0], feedback};
-    noise_src <= lfsr;
-  end
-
-  // Generate 3 independent SFX signals based on collisions and envelopes
-  wire sfx_sheep  = SheepSFX_active  & noise & x < envelopeSheep*4;
-  wire sfx_sword  = SwordSFX_active  & noise & x < envelopeSword*4;
-  wire sfx_player = PlayerSFX_active & noise & x < envelopePlayer*4;
-
-  // Edge detectors for each SFX trigger
-  reg prev_SheepDragonCollision  = 0;
-  reg prev_SwordDragonCollision  = 0;
-  reg prev_PlayerDragonCollision = 0;
-
-  // Active flags for each SFX
-  reg SheepSFX_active  = 0;
-  reg SwordSFX_active  = 0;
-  reg PlayerSFX_active = 0;
-
-  // Line counters for each SFX duration (~32k lines possible)
-  reg [14:0] line_counter_sheep  = 0;
-  reg [14:0] line_counter_sword  = 0;
-  reg [14:0] line_counter_player = 0;
-
-  // Triggering SFX for Sheep
-  always @(posedge clk) begin
-    prev_SheepDragonCollision <= SheepDragonCollision & ~SheepSFX_active;
-    if (~prev_SheepDragonCollision & SheepDragonCollision) begin
-        SheepSFX_active <= 1;
-        line_counter_sheep <= 0;
-    end
-    if (SheepSFX_active && x == 0) begin
-        line_counter_sheep <= line_counter_sheep + 1;
-        if (line_counter_sheep >= 6000) begin
-            SheepSFX_active <= 0;
-        end
-    end
-  end
-
-  // Triggering SFX for Sword
-  always @(posedge clk) begin
-    prev_SwordDragonCollision <= SwordDragonCollision & ~SwordSFX_active;
-    if (~prev_SwordDragonCollision & SwordDragonCollision) begin
-        SwordSFX_active <= 1;
-        line_counter_sword <= 0;
-    end
-    if (SwordSFX_active && x == 0) begin
-        line_counter_sword <= line_counter_sword + 1;
-        if (line_counter_sword >= 6000) begin
-            SwordSFX_active <= 0;
-        end
-    end
-  end
-
-  // Triggering SFX for Player
-  always @(posedge clk) begin
-    prev_PlayerDragonCollision <= PlayerDragonCollision & ~PlayerSFX_active;
-    if (~prev_PlayerDragonCollision & PlayerDragonCollision) begin
-        PlayerSFX_active <= 1;
-        line_counter_player <= 0;
-    end
-    if (PlayerSFX_active && x == 0) begin
-        line_counter_player <= line_counter_player + 1;
-        if (line_counter_player >= 6000) begin
-            PlayerSFX_active <= 0;
-        end
-    end
-  end
-
-  // SFX Timers  
-  always @(posedge clk) begin
+always @(posedge clk) begin
     if (reset) begin
-      frame_counter <= 0;
-      noise_counter <= 0;
-      noise <= 0;
+        dragon_active <= 0;
+        dragon_cooldown <= 0;
+        dragon_counter <= 0;
+        dragon_square <= 0;
+        dragon_duration <= 0;
+        dragon_cooldown_timer <= 0;
     end else begin
-      // frame counter
-      if (x == 0 && y == 0) begin
-        frame_counter <= frame_counter + `MUSIC_SPEED;
-      end
-      // noise timer
-      if (x == 0) begin
-        if (noise_counter > 1) begin 
-          noise_counter <= 0;
-          noise <= noise ^ noise_src;
-        end else
-          noise_counter <= noise_counter + 1'b1;
-      end
-    end
-  end
+        if (SheepDragonCollision && !dragon_active && !dragon_cooldown) begin
+            dragon_active <= 1;
+            dragon_duration <= 3000;
+        end
 
-  // output
-  assign sound = sfx_sheep | sfx_sword | sfx_player;
+        if (dragon_active) begin
+            if (dragon_counter >= 600) begin
+                dragon_counter <= 0;
+                dragon_square <= ~dragon_square;
+            end else
+                dragon_counter <= dragon_counter + 1;
+
+            if (dragon_duration == 0) begin
+                dragon_active <= 0;
+                dragon_cooldown <= 1;
+                dragon_cooldown_timer <= 3000000;
+            end else
+                dragon_duration <= dragon_duration - 1;
+        end
+
+        if (dragon_cooldown) begin
+            if (dragon_cooldown_timer == 0)
+                dragon_cooldown <= 0;
+            else
+                dragon_cooldown_timer <= dragon_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] dragon_out = (dragon_square & dragon_active) ? 4'd8 : 4'd0;
+
+//-------------------------------------------//
+// SFX 2: Knight Hitting Dragon (noise burst)
+//-------------------------------------------//
+reg knight_hit_active, knight_hit_cooldown;
+reg [11:0] knight_hit_duration, knight_hit_cooldown_timer;
+reg [12:0] lfsr;
+wire lfsr_feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0];
+
+always @(posedge clk) begin
+    if (reset) begin
+        knight_hit_active <= 0;
+        knight_hit_cooldown <= 0;
+        knight_hit_duration <= 0;
+        knight_hit_cooldown_timer <= 0;
+        lfsr <= 13'b1;
+    end else begin
+        lfsr <= {lfsr[11:0], lfsr_feedback};
+
+        if (SwordDragonCollision && !knight_hit_active && !knight_hit_cooldown) begin
+            knight_hit_active <= 1;
+            knight_hit_duration <= 1800;
+        end
+
+        if (knight_hit_active) begin
+            if (knight_hit_duration == 0) begin
+                knight_hit_active <= 0;
+                knight_hit_cooldown <= 1;
+                knight_hit_cooldown_timer <= 1800;
+            end else
+                knight_hit_duration <= knight_hit_duration - 1;
+        end
+
+        if (knight_hit_cooldown) begin
+            if (knight_hit_cooldown_timer == 0)
+                knight_hit_cooldown <= 0;
+            else
+                knight_hit_cooldown_timer <= knight_hit_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] knight_hit_out = (lfsr[0] & knight_hit_active) ? 4'd10 : 4'd0;
+
+//-------------------------------------------//
+// SFX 3: Knight Taking Damage (high beep)
+//-------------------------------------------//
+reg knight_hurt_active, knight_hurt_cooldown;
+reg [15:0] knight_hurt_counter;
+reg knight_hurt_square;
+reg [15:0] knight_hurt_duration, knight_hurt_cooldown_timer;
+
+always @(posedge clk) begin
+    if (reset) begin
+        knight_hurt_active <= 0;
+        knight_hurt_cooldown <= 0;
+        knight_hurt_counter <= 0;
+        knight_hurt_square <= 0;
+        knight_hurt_duration <= 0;
+        knight_hurt_cooldown_timer <= 0;
+    end else begin
+        if (PlayerDragonCollision && !knight_hurt_active && !knight_hurt_cooldown) begin
+            knight_hurt_active <= 1;
+            knight_hurt_duration <= 1500;
+        end
+
+        if (knight_hurt_active) begin
+            if (knight_hurt_counter >= 200) begin
+                knight_hurt_counter <= 0;
+                knight_hurt_square <= ~knight_hurt_square;
+            end else
+                knight_hurt_counter <= knight_hurt_counter + 1;
+
+            if (knight_hurt_duration == 0) begin
+                knight_hurt_active <= 0;
+                knight_hurt_cooldown <= 1;
+                knight_hurt_cooldown_timer <= 1500;
+            end else
+                knight_hurt_duration <= knight_hurt_duration - 1;
+        end
+
+        if (knight_hurt_cooldown) begin
+            if (knight_hurt_cooldown_timer == 0)
+                knight_hurt_cooldown <= 0;
+            else
+                knight_hurt_cooldown_timer <= knight_hurt_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] knight_hurt_out = (knight_hurt_square & knight_hurt_active) ? 4'd12 : 4'd0;
+
+//-------------------------------------------//
+// SFX 4: Game Win/Loss (melody)
+//-------------------------------------------//
+reg game_active, game_cooldown;
+reg [3:0] melody_step;
+reg [15:0] game_counter, tone_period;
+reg game_square;
+reg [15:0] game_cooldown_timer;
+
+always @(posedge clk) begin
+    if (reset) begin
+        game_active <= 0;
+        game_cooldown <= 0;
+        melody_step <= 0;
+        game_counter <= 0;
+        tone_period <= 0;
+        game_square <= 0;
+        game_cooldown_timer <= 0;
+    end else begin
+        if (frame_end && !game_active && !game_cooldown && (melody_step == 0)) begin
+            game_active <= 1;
+            melody_step <= 0;
+        end
+
+        if (game_active) begin
+            if (game_counter >= tone_period) begin
+                game_counter <= 0;
+                game_square <= ~game_square;
+            end else
+                game_counter <= game_counter + 1;
+
+            if (frame_end) begin
+                melody_step <= melody_step + 1;
+                case (melody_step)
+                    0: tone_period <= 600;
+                    1: tone_period <= 400;
+                    2: tone_period <= 500;
+                    3: tone_period <= 700;
+                    4: begin
+                        tone_period <= 0;
+                        game_active <= 0;
+                        game_cooldown <= 1;
+                        game_cooldown_timer <= 3000;
+                    end
+                endcase
+            end
+        end
+
+        if (game_cooldown) begin
+            if (game_cooldown_timer == 0)
+                game_cooldown <= 0;
+            else
+                game_cooldown_timer <= game_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] game_out = (game_square & game_active) ? 4'd14 : 4'd0;
+
+//-------------------------------------------//
+// PWM Mixer
+//-------------------------------------------//
+wire [5:0] mix = dragon_out + knight_hit_out + knight_hurt_out + game_out;
+
+reg [5:0] pwm_counter;
+always @(posedge clk) begin
+    pwm_counter <= pwm_counter + 1;
+end
+
+assign sound = (pwm_counter < mix);
 
 endmodule
