@@ -2,10 +2,10 @@
 
 # =============
 
-UUT_SRCS 	?= Sync			#(!) Source File(s) [add .v to the end of each filename]
-WRAPPER_TB 	?= sync_wtb		#(!) Wrapper-Testbench Name		
-TOPLEVEL 	?= sync_tb	    #(!) Toplevel Module (Wrapper module)
-TEST_MODULE ?= test_sync	#(!) Python Test Module Filename
+UUT_SRCS 	?= SNES				#(!) Source File(s) [add .v to the end of each filename]
+WRAPPER_TB 	?= snes_wrapper		#(!) Wrapper-Testbench Name		
+TOPLEVEL 	?= snes_wrapper	    #(!) Toplevel Module (Wrapper module)
+TEST_MODULE ?= test_snes		#(!) Python Test Module Filename
 
 # =============
 
