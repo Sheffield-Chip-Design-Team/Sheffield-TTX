@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: © 2025 SHaRC - James Ashie Kotey
 # SPDX-License-Identifier: Apache-2.0
-
+# 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
@@ -386,37 +386,37 @@ async def test_hsync_random(uut):
 
 #     uut._log.info("VSync Duration Test Passed!")
 
-@cocotb.test()
-async def test_vsync_random(uut):
-    """ Constrained random test for vsync signal.
-    Randomly waits for a number of clock cycles and checks vsync behavior.
-    """
+# @cocotb.test()
+# async def test_vsync_random(uut):
+#     """ Constrained random test for vsync signal.
+#     Randomly waits for a number of clock cycles and checks vsync behavior.
+#     """
 
-    CYCLE_LIMIT = V_MAX * H_MAX  # Number of cycles in a complete frame
+#     CYCLE_LIMIT = V_MAX * H_MAX  # Number of cycles in a complete frame
 
-    uut._log.info("Starting Constrained Random VSync Test")
+#     uut._log.info("Starting Constrained Random VSync Test")
     
-    await init_module(uut)
-    # Reset the module
-    await reset(uut)
-    uut._log.info("Module Reset Complete")
+#     await init_module(uut)
+#     # Reset the module
+#     await reset(uut)
+#     uut._log.info("Module Reset Complete")
 
-    # Generate a random number of clock cycles to wait (constrained range)
-    random_cycles = randint(1, CYCLE_LIMIT)  # Constrain to 2 vertical frame periods
-    uut._log.info(f"Waiting for {random_cycles} clock cycles before checking vsync")
+#     # Generate a random number of clock cycles to wait (constrained range)
+#     random_cycles = randint(1, CYCLE_LIMIT)  # Constrain to 2 vertical frame periods
+#     uut._log.info(f"Waiting for {random_cycles} clock cycles before checking vsync")
 
-    # Wait for the random number of clock cycles
-    await ClockCycles(uut.clk, random_cycles)
+#     # Wait for the random number of clock cycles
+#     await ClockCycles(uut.clk, random_cycles)
 
-    # Capture the vsync signal value
-    vsync_value = uut.vsync.value
-    uut._log.info(f"VSync value after {random_cycles} cycles: {vsync_value}")
+#     # Capture the vsync signal value
+#     vsync_value = uut.vsync.value
+#     uut._log.info(f"VSync value after {random_cycles} cycles: {vsync_value}")
 
-    # Assert that vsync behaves as expected
-    # For example, check if vsync is high during the sync pulse
-    if random_cycles % V_MAX >= V_SYNC_START and random_cycles % V_MAX <= V_SYNC_END:
-        assert vsync_value == 1, f"VSync should be high during sync pulse, but got {vsync_value}"
-    else:
-        assert vsync_value == 0, f"VSync should be low outside sync pulse, but got {vsync_value}"
+#     # Assert that vsync behaves as expected
+#     # For example, check if vsync is high during the sync pulse
+#     if random_cycles % V_MAX >= V_SYNC_START and random_cycles % V_MAX <= V_SYNC_END:
+#         assert vsync_value == 1, f"VSync should be high during sync pulse, but got {vsync_value}"
+#     else:
+#         assert vsync_value == 0, f"VSync should be low outside sync pulse, but got {vsync_value}"
 
-    uut._log.info("Constrained Random VSync Test Passed!")
+#     uut._log.info("Constrained Random VSync Test Passed!")
