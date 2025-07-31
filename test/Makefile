@@ -10,6 +10,7 @@ CURRENT_DIR    :=  $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SRC_DIR         =  $(CURRENT_DIR)../src
 TEST_DIR        =  $(CURRENT_DIR)unit
 $(info TEST_ROOT = $(TEST_DIR))
+
 # Test Disccdovery 
 PATTERN := Makefile               # file that marks a test folder 
 
@@ -29,9 +30,6 @@ export PROJECT_SOURCES
 # if NOT a Gate Level Test
 ifneq ($(GATES), yes) 
 
-
-
-
 # RTL Unit test simulation
 
 SIM_BUILD		    = sim_build/rtl
@@ -46,23 +44,38 @@ ifneq ($(UNIT), no)
 
 # DISCOVER TESTS #
 
-# 1.  Find every Makefile below $(TEST_DIR)
+# 1:  Find every Makefile below $(TEST_DIR)
 TEST_MAKEFILES := $(shell find $(TEST_DIR) -type f -name $(PATTERN))
 $(info TEST_MAKEFILES = '$(TEST_MAKEFILES)')
 
-# 2.  Strip the root path  e.g. (sync  ppu apu player)
-TEST_DIRS := $(sort $(patsubst $(TEST_DIR)/%,%,$(dir $(TEST_MAKEFILES))))
+# 2: Exclude any Makefiles that explicitly say RUN = no, false, n (case-insensitive)
+MAKEFILES_WITH_RUN_FALSE := $(shell grep -iE '^[[:space:]]*RUN[[:space:]]*\??=[[:space:]]*(no|false|n)$$' $(TEST_MAKEFILES))
+
+# 3: Subtract false Makefiles from all Makefiles
+MAKEFILES_TO_RUN := $(filter-out $(MAKEFILES_WITH_RUN_FALSE), $(TEST_MAKEFILES))
+
+#  3: Extract unique directories
+RUN_DIRS := $(sort $(dir $(MAKEFILES_TO_RUN)))
+
+# 4:  Strip the root path  e.g. (sync ppu apu player)
+TEST_DIRS := $(sort $(patsubst %/,%,$(patsubst $(TEST_DIR)/%,%,$(dir $(MAKEFILES_TO_RUN)))))
 
 TESTS ?= $(TEST_DIRS)
 $(info TEST LOCATIONS = '$(TESTS)')
 
 #  RUN TESTS  #
 
-.PHONY: $(TEST_DIRS) all
+run_all_tests:
+	@$(foreach dir, $(TEST_DIRS), \
+		echo "Running tests in $(dir)" && \
+			$(MAKE) -C /$(TEST_DIR)/$(dir) || echo "Test failed in $(dir)."; \
+	)
 
-# Run all tests (ignore errors)
-$(TEST_DIRS):
-	-$(MAKE) -C $(TEST_DIR)/$@ 
+# .PHONY: $(TEST_DIRS) all
+
+# # Run all tests (ignore errors)
+# $(TEST_DIRS):\
+# 	-$(MAKE) -C $(TEST_DIR)/$@ || true
 
 # Default target = run all chosen tests
 all: $(TESTS) 
@@ -73,14 +86,8 @@ clean:
 	@for d in $(TESTS); do \
 	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
 	done
-	
-else
 
-
-
-
-
-
+endif
 
 else
 
