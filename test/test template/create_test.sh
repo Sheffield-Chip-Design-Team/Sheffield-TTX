@@ -7,11 +7,12 @@ show_help() {
   echo "Cocotb Environment Setup Script"
   echo "James Ashie Kotey - SHaRC 2025"
   echo "Usage:"
-  echo "  $0 -s <UUT_SRCS> -w <WRAPPER_TB> -t <TOPLEVEL> -m <TEST_MODULE> [--regen]"
+  echo "  $0 [TARGET_DIR] -s <UUT_SRCS> -w <WRAPPER_TB> -t <TOPLEVEL> -m <TEST_MODULE> [--regen]"
   echo "  OR"
-  echo "  $0 <UUT_SRCS> <WRAPPER_TB> <TOPLEVEL> <TEST_MODULE>"
+  echo "  $0 [TARGET_DIR] <UUT_SRCS> <WRAPPER_TB> <TOPLEVEL> <TEST_MODULE>"
   echo ""
   echo "Options:"
+  echo "  [TARGET_DIR]    Optional. Directory to create test environment in."
   echo "  -s, --src       Name(s) of the UUT Verilog source file(s) (space-separated, no .v)"
   echo "  -w, --wtb       Name of the wrapper testbench file (without .v)"
   echo "  -t, --top       Name of the top-level Verilog module (e.g., 'sync_tb')"
@@ -22,8 +23,33 @@ show_help() {
   echo "Example:"
   echo "  $0 -s Sync -w sync_wtb -t sync_tb -m test_sync"
   echo "  $0 Sync sync_wtb sync_tb test_sync"
+  echo "  $0 my_dir Sync sync_wtb sync_tb test_sync"
   exit 0
 }
+
+# Show help if no args or help flag used
+if [ "$#" -eq 0 ] || [[ " $* " == *" --help "* ]] || [[ " $* " == *" -h "* ]]; then
+  show_help
+fi
+
+# ===== Detect optional directory argument =====
+
+# Save and maybe shift into target dir
+if [ -n "$1" ] && [[ "$1" != -* ]]; then
+  TARGET_DIR="$1"
+
+  if [ ! -d $TARGET_DIR ]; then
+    mkdir -p $TARGET_DIR
+    echo "[SETUP] Created folder: $TARGET_DIR"
+  fi
+
+  shift
+  echo "[INFO] Changing to target directory: $TARGET_DIR"
+  cd "$TARGET_DIR" || { echo "Failed to enter directory: $TARGET_DIR"; exit 1; }
+  
+else
+  TARGET_DIR="."
+fi
 
 # Show help if no args or help flag used
 if [ "$#" -eq 0 ] || [[ " $* " == *" --help "* ]] || [[ " $* " == *" -h "* ]]; then
@@ -35,10 +61,8 @@ UUT_SRCS=""
 WRAPPER_TB=""
 TOPLEVEL=""
 TEST_MODULE=""
-NEW_ENV=true
 REGEN_ONLY=false
 
-# Check flags vs positional args
 if [[ "$1" == -* ]]; then
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -75,6 +99,7 @@ if [[ -z "$UUT_SRCS" || -z "$WRAPPER_TB" || -z "$TOPLEVEL" || -z "$TEST_MODULE" 
   echo "Run '$0 --help' for usage."
   exit 1
 fi
+
 
 # Sanitize inputs
 UUT_SRCS="$(echo "$UUT_SRCS" | xargs)"
