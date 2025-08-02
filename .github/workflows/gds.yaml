@@ -18,12 +18,19 @@ jobs:
         with:
           flow: openlane2
 
+      - name: Copy OpenLane logs out of container
+
+        run: |
+          mkdir -p ol2_logs
+          cp -r ol2/*/openlane.log ol2_logs/ || true
+          cp -r ol2/*/runs ol2_logs/ || true   # 每个 step 的 stdout.log 都在 runs 里
+
       - name: Upload OpenLane logs
-        if: always()                  
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: openlane-full-log
-          path: runs   
+          path: ol2_logs
 
   precheck:
     needs: gds
