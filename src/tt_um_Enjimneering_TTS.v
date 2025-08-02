@@ -296,7 +296,7 @@ module tt_um_Enjimneering_top (
       .clk(clk),
       .reset(~rst_n),
       .frame_end(frame_end),
-      .snare_trigger(PlayerDragonCollision),
+      .PlayerDragonCollision(PlayerDragonCollision),
       .x(pix_x),
       .y(pix_y),
       .sound(sound)
