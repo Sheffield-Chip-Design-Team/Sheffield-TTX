@@ -8,6 +8,8 @@ show_help() {
   echo "James Ashie Kotey - SHaRC 2025"
   echo "Usage:"
   echo "  $0 [TARGET_DIR] -s <UUT_SRCS> -w <WRAPPER_TB> -t <TOPLEVEL> -m <TEST_MODULE> [--regen]"
+  echo "  $0 [TARGET_DIR] -s <UUT_SRCS> -a 'base_name' "
+  echo "  $0 [TARGET_DIR] -s <UUT_SRCS> name='base_name' "
   echo "  OR"
   echo "  $0 [TARGET_DIR] <UUT_SRCS> <WRAPPER_TB> <TOPLEVEL> <TEST_MODULE>"
   echo ""
@@ -20,10 +22,11 @@ show_help() {
   echo "  -h, --help      Show this help message and exit"
   echo "  --regen         Only regenerate Makefile (skip testbench/Python file creation)"
   echo ""
-  echo "Example:"
+  echo "Examples:"
   echo "  $0 -s Sync -w sync_wtb -t sync_tb -m test_sync"
   echo "  $0 Sync sync_wtb sync_tb test_sync"
   echo "  $0 my_dir Sync sync_wtb sync_tb test_sync"
+  echo "  $0 my_dir/sycn Sync -a 'sync"
   exit 0
 }
 
@@ -46,7 +49,7 @@ if [ -n "$1" ] && [[ "$1" != -* ]]; then
   shift
   echo "[INFO] Changing to target directory: $TARGET_DIR"
   cd "$TARGET_DIR" || { echo "Failed to enter directory: $TARGET_DIR"; exit 1; }
-  
+
 else
   TARGET_DIR="."
 fi
@@ -62,6 +65,7 @@ WRAPPER_TB=""
 TOPLEVEL=""
 TEST_MODULE=""
 REGEN_ONLY=false
+ALIAS=""
 
 if [[ "$1" == -* ]]; then
   while [[ "$#" -gt 0 ]]; do
@@ -76,6 +80,7 @@ if [[ "$1" == -* ]]; then
       -w|--wtb) WRAPPER_TB="$2"; shift 2 ;;
       -t|--top) TOPLEVEL="$2"; shift 2 ;;
       -m|--module) TEST_MODULE="$2"; shift 2 ;;
+      -a|--alias)  ALIAS="$2"; shift 2 ;;
       --regen) REGEN_ONLY=true; shift ;;
       -h|--help) show_help ;;
       *) echo "Unknown option: $1"; show_help ;;
@@ -93,8 +98,15 @@ else
   TEST_MODULE="$4"
 fi
 
+if [ -n "$ALIAS" ]; then
+  WRAPPER_TB="${ALIAS}_wtb"
+  TOPLEVEL="${ALIAS}_tb"
+  TEST_MODULE="test_${ALIAS}"
+fi
+
 # Sanity check
-if [[ -z "$UUT_SRCS" || -z "$WRAPPER_TB" || -z "$TOPLEVEL" || -z "$TEST_MODULE" ]]; then
+
+if [[ -z "$WRAPPER_TB" || -z "$TOPLEVEL" || -z "$TEST_MODULE" ]]; then
   echo "Error: Missing required arguments."
   echo "Run '$0 --help' for usage."
   exit 1
