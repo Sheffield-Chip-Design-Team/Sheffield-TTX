@@ -15,7 +15,7 @@ $(info TEST_ROOT = $(TEST_DIR))
 PATTERN := Makefile               # file that marks a test folder 
 
 # Define and Export Sources  (UPDATE WHEN A NEW FILE IS ADDED!)
-PROJECT_SOURCES = tt_um_Enjimneering_TTS.v InputCollector.v PlayerLogic.v DragonHead.v DragonBody.v PictureProcessingUnit.v SpriteROM.v sync_generator.v CollisionDetector.v DragonTarget.v Hearts.v sheepLogic.v AudioProcessingUnit.v
+PROJECT_SOURCES = tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v
 VERILOG_SOURCES = $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 
 export SIM
