@@ -16,19 +16,7 @@ jobs:
       - name: Build GDS
         uses: TinyTapeout/tt-gds-action@tt10
         with:
-         flow: openlane2
-      - name: Build GDS (capture full log)
-        run: |
-         set -o pipefail                       
-         tt-gds-action-entrypoint \
-           --flow openlane2 \                  
-           2>&1 | tee openlane_full.log        
-
-      - name: Upload OpenLane log
-        uses: actions/upload-artifact@v4
-        with:
-         name: openlane-full-log               
-         path: openlane_full.log   
+          flow: openlane2
 
   precheck:
     needs: gds
