@@ -106,7 +106,18 @@ module tt_um_Enjimneering_TTS (
     wire [1:0] sword_orientation;   // sword orientation 
 
     // sheep variables
-    wire [7:0] sheep_pos;
+    wire [7:0] sheep_pos;           // 8-bit position (4 bits for X, 4 bits for Y)
+    wire [3:0] sheep_sprite;
+
+    sheepLogic sheep (
+        .clk(ui_in[7]), 
+        .reset(~rst_n),
+        .read_enable(1), 
+        .dragon_pos(dragon_position), 
+        .player_pos(player_pos),
+        .sheep_pos(sheep_pos),
+        .sheep_sprite(sheep_sprite)
+    );
 
     PlayerLogic playlogic(
         .clk(clk),
