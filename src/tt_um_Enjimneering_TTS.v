@@ -197,7 +197,7 @@ module tt_um_Enjimneering_top (
         .reset          (~rst_n), 
         // game entitites 
         .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),                // player
-        .entity_2       ({sword_sprite, sword_orientation, sword_position, 4'b0001}),                // sword
+        .entity_2       ({sword_sprite, sword_orientation, sword_pos, 4'b0001}),                // sword
         .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                                     // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
