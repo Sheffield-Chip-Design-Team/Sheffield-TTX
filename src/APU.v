@@ -1,4 +1,4 @@
-module APU (
+module AudioProcessingUnit (
     input wire clk,
     input wire reset,
     input wire SheepDragonCollision,
