@@ -105,6 +105,9 @@ module tt_um_Enjimneering_top (
     wire [3:0] sword_sprite;        // used to toggle sword visibility
     wire [1:0] sword_orientation;   // sword orientation 
 
+    // sheep variables
+    wire [7:0] sheep_pos;
+
     PlayerLogic playlogic(
         .clk(clk),
         .reset(~rst_n | playerHurt),
