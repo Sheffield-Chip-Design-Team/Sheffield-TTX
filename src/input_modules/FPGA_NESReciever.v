@@ -22,6 +22,11 @@ module NESTest_Top (
     output wire NES_Latch,
     output wire NES_Clk,
 
+    // SNES PMOD interface [3 pins]
+    input wire SNES_PMOD_Data,    // PMOD IO7  
+    input wire SNES_PMOD_Clk,     // PMOD IO6
+    input wire SNES_PMOD_Latch,   // PMOD IO5
+
     // button states [LEDs]
     output wire A_out,
     output wire B_out,
@@ -30,7 +35,16 @@ module NESTest_Top (
     output wire up_out,
     output wire down_out,
     output wire left_out,
-    output wire right_out
+    output wire right_out,
+    
+    // Additional SNES buttons [LEDs]
+    output wire X_out,
+    output wire Y_out,
+    output wire L_out,
+    output wire R_out,
+    
+    // Status indicator [optional LED]
+    output wire controller_status  // 1 = SNES active, 0 = NES active
 
 );
 
@@ -44,21 +58,74 @@ module NESTest_Top (
         .clk_50MHz(system_clk_50MHz)
     );
 
+    // NES Controller signals
+    wire nes_A, nes_B, nes_select, nes_start;
+    wire nes_up, nes_down, nes_left, nes_right;
+
     NES_Reciever nesRec (
         .clk(system_clk_50MHz),
         .reset(reset),
         .data(NES_Data),
         .latch(NES_Latch),
         .nes_clk(NES_Clk),
-        .A(A_out),
-        .B(B_out),
-        .select(select_out),
-        .start(start_out),
-        .up(up_out),
-        .down(down_out),
-        .left(left_out),
-        .right(right_out)
+        .A(nes_A),
+        .B(nes_B),
+        .select(nes_select),
+        .start(nes_start),
+        .up(nes_up),
+        .down(nes_down),
+        .left(nes_left),
+        .right(nes_right)
     );
+
+    // SNES Controller signals
+    wire snes_A, snes_B, snes_select, snes_start;
+    wire snes_up, snes_down, snes_left, snes_right;
+    wire snes_X, snes_Y, snes_L, snes_R;
+    wire snes_present;  // Auto-detection signal
+
+    // SNES PMOD Interface (using the actual module from the repo)
+    gamepad_pmod_single snes_controller (
+        .rst_n(~reset),                 // Active low reset
+        .clk(system_clk_50MHz),         // 50MHz clock
+        .pmod_data(SNES_PMOD_Data),     // Raw PMOD signals
+        .pmod_clk(SNES_PMOD_Clk),
+        .pmod_latch(SNES_PMOD_Latch),
+        .a(snes_A),                 
+        .b(snes_B),
+        .x(snes_X),
+        .y(snes_Y),
+        .select(snes_select),
+        .start(snes_start),
+        .up(snes_up),
+        .down(snes_down),
+        .left(snes_left),
+        .right(snes_right),
+        .l(snes_L),
+        .r(snes_R),
+        .is_present(snes_present)
+    );
+
+    // AUTO-DETECTION MULTIPLEXER
+    // If SNES controller is present, use it. Otherwise, fall back to NES.
+    assign A_out = snes_present ? snes_A : nes_A;
+    assign B_out = snes_present ? snes_B : nes_B;
+    assign select_out = snes_present ? snes_select : nes_select;
+    assign start_out = snes_present ? snes_start : nes_start;
+    assign up_out = snes_present ? snes_up : nes_up;
+    assign down_out = snes_present ? snes_down : nes_down;
+    assign left_out = snes_present ? snes_left : nes_left;
+    assign right_out = snes_present ? snes_right : nes_right;
+    
+    // SNES-only buttons (only active when SNES is present)
+    assign X_out = snes_present ? snes_X : 1'b0;
+    assign Y_out = snes_present ? snes_Y : 1'b0;
+    assign L_out = snes_present ? snes_L : 1'b0;
+    assign R_out = snes_present ? snes_R : 1'b0;
+    
+    // Status indicator (optional LED to show which controller is active)
+    assign controller_status = snes_present;  // 1 = SNES, 0 = NES
+    
 
 endmodule
 
@@ -362,5 +429,224 @@ module NES_Reciever (
     assign down   = ~down_reg;
     assign left   = ~left_reg;
     assign right  = ~right_reg;
+
+endmodule
+
+
+/*
+ * Copyright (c) 2025 Pat Deegan
+ * https://psychogenic.com
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Interfacing code for the Gamepad Pmod from Psycogenic Technologies,
+ * designed for Tiny Tapeout.
+ *
+ * There are two high-level modules that most users will be interested in:
+ * - gamepad_pmod_single: for a single controller;
+ * - gamepad_pmod_dual: for two controllers.
+ * 
+ * There are also two lower-level modules that you can use if you want to
+ * handle the interfacing yourself:
+ * - gamepad_pmod_driver: interfaces with the Pmod and provides the raw data;
+ * - gamepad_pmod_decoder: decodes the raw data into button states.
+ *
+ * The docs, schematics, PCB files, and firmware code for the Gamepad Pmod
+ * are available at https://github.com/psychogenic/gamepad-pmod.
+ */
+
+/**
+ * gamepad_pmod_driver -- Serial interface for the Gamepad Pmod.
+ *
+ * This module reads raw data from the Gamepad Pmod *serially*
+ * and stores it in a shift register. When the latch signal is received, 
+ * the data is transferred into `data_reg` for further processing.
+ *
+ * Functionality:
+ *   - Synchronizes the `pmod_data`, `pmod_clk`, and `pmod_latch` signals 
+ *     to the system clock domain.
+ *   - Captures serial data on each falling edge of `pmod_clk`.
+ *   - Transfers the shifted data into `data_reg` when `pmod_latch` goes low.
+ *
+ * Parameters:
+ *   - `BIT_WIDTH`: Defines the width of `data_reg` (default: 24 bits).
+ *
+ * Inputs:
+ *   - `rst_n`: Active-low reset.
+ *   - `clk`: System clock.
+ *   - `pmod_data`: Serial data input from the Pmod.
+ *   - `pmod_clk`: Serial clock from the Pmod.
+ *   - `pmod_latch`: Latch signal indicating the end of data transmission.
+ *
+ * Outputs:
+ *   - `data_reg`: Captured parallel data after shifting is complete.
+ */
+module gamepad_pmod_driver #(
+    parameter BIT_WIDTH = 24
+) (
+    input wire rst_n,
+    input wire clk,
+    input wire pmod_data,
+    input wire pmod_clk,
+    input wire pmod_latch,
+    output reg [BIT_WIDTH-1:0] data_reg
+);
+
+  reg pmod_clk_prev;
+  reg pmod_latch_prev;
+  reg [BIT_WIDTH-1:0] shift_reg;
+
+  // Sync Pmod signals to the clk domain:
+  reg [1:0] pmod_data_sync;
+  reg [1:0] pmod_clk_sync;
+  reg [1:0] pmod_latch_sync;
+
+  always @(posedge clk) begin
+    if (~rst_n) begin
+      pmod_data_sync  <= 2'b0;
+      pmod_clk_sync   <= 2'b0;
+      pmod_latch_sync <= 2'b0;
+    end else begin
+      pmod_data_sync  <= {pmod_data_sync[0], pmod_data};
+      pmod_clk_sync   <= {pmod_clk_sync[0], pmod_clk};
+      pmod_latch_sync <= {pmod_latch_sync[0], pmod_latch};
+    end
+  end
+
+  always @(posedge clk) begin
+    if (~rst_n) begin
+      /* set data and shift registers to all ones
+       * such that it is detected as "not present" yet.
+       */
+      data_reg <= {BIT_WIDTH{1'b1}};
+      shift_reg <= {BIT_WIDTH{1'b1}};
+      pmod_clk_prev <= 1'b0;
+      pmod_latch_prev <= 1'b0;
+    end
+    begin
+      pmod_clk_prev   <= pmod_clk_sync[1];
+      pmod_latch_prev <= pmod_latch_sync[1];
+
+      // Capture data on rising edge of pmod_latch:
+      if (pmod_latch_sync[1] & ~pmod_latch_prev) begin
+        data_reg <= shift_reg;
+      end
+
+      // Sample data on rising edge of pmod_clk:
+      if (pmod_clk_sync[1] & ~pmod_clk_prev) begin
+        shift_reg <= {shift_reg[BIT_WIDTH-2:0], pmod_data_sync[1]};
+      end
+    end
+  end
+
+endmodule
+
+
+/**
+ * gamepad_pmod_decoder -- Decodes raw data from the Gamepad Pmod.
+ *
+ * This module takes a 12-bit parallel data register (`data_reg`) 
+ * and decodes it into individual button states. It also determines
+ * whether a controller is connected.
+ *
+ * Functionality:
+ *   - If `data_reg` contains all `1's` (`0xFFF`), it indicates that no controller is connected.
+ *   - Otherwise, it extracts individual button states from `data_reg`.
+ *
+ * Inputs:
+ *   - `data_reg [11:0]`: Captured button state data from the gamepad.
+ *
+ * Outputs:
+ *   - `b, y, select, start, up, down, left, right, a, x, l, r`: Individual button states (`1` = pressed, `0` = released).
+ *   - `is_present`: Indicates whether a controller is connected (`1` = connected, `0` = not connected).
+ */
+module gamepad_pmod_decoder (
+    input wire [11:0] data_reg,
+    output wire b,
+    output wire y,
+    output wire select,
+    output wire start,
+    output wire up,
+    output wire down,
+    output wire left,
+    output wire right,
+    output wire a,
+    output wire x,
+    output wire l,
+    output wire r,
+    output wire is_present
+);
+
+  // When the controller is not connected, the data register will be all 1's
+  wire reg_empty = (data_reg == 12'hfff);
+  assign is_present = reg_empty ? 0 : 1'b1;
+  assign {b, y, select, start, up, down, left, right, a, x, l, r} = reg_empty ? 0 : data_reg;
+
+endmodule
+
+
+/**
+ * gamepad_pmod_single -- Main interface for a single Gamepad Pmod controller.
+ * 
+ * This module provides button states for a **single controller**, reducing 
+ * resource usage (fewer flip-flops) compared to a dual-controller version.
+ * 
+ * Inputs:
+ *   - `pmod_data`, `pmod_clk`, and `pmod_latch` are the signals from the PMOD interface.
+ * 
+ * Outputs:
+ *   - Each button's state is provided as a single-bit wire (e.g., `start`, `up`, etc.).
+ *   - `is_present` indicates whether the controller is connected (`1` = connected, `0` = not detected).
+ */
+module gamepad_pmod_single (
+    input wire rst_n,
+    input wire clk,
+    input wire pmod_data,
+    input wire pmod_clk,
+    input wire pmod_latch,
+
+    output wire b,
+    output wire y,
+    output wire select,
+    output wire start,
+    output wire up,
+    output wire down,
+    output wire left,
+    output wire right,
+    output wire a,
+    output wire x,
+    output wire l,
+    output wire r,
+    output wire is_present
+);
+
+  wire [11:0] gamepad_pmod_data;
+
+  gamepad_pmod_driver #(
+      .BIT_WIDTH(12)
+  ) driver (
+      .rst_n(rst_n),
+      .clk(clk),
+      .pmod_data(pmod_data),
+      .pmod_clk(pmod_clk),
+      .pmod_latch(pmod_latch),
+      .data_reg(gamepad_pmod_data)
+  );
+
+  gamepad_pmod_decoder decoder (
+      .data_reg(gamepad_pmod_data),
+      .b(b),
+      .y(y),
+      .select(select),
+      .start(start),
+      .up(up),
+      .down(down),
+      .left(left),
+      .right(right),
+      .a(a),
+      .x(x),
+      .l(l),
+      .r(r),
+      .is_present(is_present)
+  );
 
 endmodule
