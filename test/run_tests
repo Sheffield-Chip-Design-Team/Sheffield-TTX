@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Usage: ./run.sh regress -runs <number> -width <number> [other options]
+#        ./run.sh sim [other options]
+
+if [[ " $@ " =~ " regress " ]]; then
+    args=()
+    for arg in "$@"; do
+        if [[ "$arg" != "regress" ]]; then
+            args+=("$arg")
+        fi
+    done
+    python3 -m regress "${args[@]}"
+    exit 1
+fi
+
+if [[ " $@ " =~ " sim " ]]; then
+    args=()
+    tb_value=""
+    for arg in "$@"; do
+        case "$arg" in
+            -tb=*)
+                tb_value="${arg#-tb=}"
+                ;;
+            sim)
+                # skip, we just use it as a flag
+                ;;
+            *)
+                args+=("$arg")
+                ;;
+        esac
+    done
+
+    if [[ -n "$tb_value" ]]; then
+        echo "tb value is being run: $tb_value"
+        make TESTBENCH="$tb_value" 
+    else
+        make "${args[@]}"
+        echo "tb value is being NOT run: $tb_value"
+    fi
+    exit 1
+fi
+
