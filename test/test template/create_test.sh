@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Written by JAK
 # This script automates the test environment creation for a module in the tiny tapestation project
 
 show_help() {
