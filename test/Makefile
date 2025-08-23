@@ -1,108 +1,84 @@
-# Testing Master Makefile
+# ====================== SETUP ======================
 
-# =============== SETUP ================= #
-
-# Simulator setup
-SIM 		   ?= icarus
+SIM            ?= icarus
 TOPLEVEL_LANG  ?= verilog
-# Directory setup
-CURRENT_DIR    :=  $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-SRC_DIR         =  $(CURRENT_DIR)../src
-TEST_DIR        =  $(CURRENT_DIR)unit
-$(info TEST_ROOT = $(TEST_DIR))
+CURRENT_DIR    := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SRC_DIR        := $(CURRENT_DIR)../src
+TEST_DIR       := $(CURRENT_DIR)unit
+PATTERN        := Makefile
 
-# Test Disccdovery 
-PATTERN := Makefile               # file that marks a test folder 
-
-# Define and Export Sources  (UPDATE WHEN A NEW FILE IS ADDED!)
+# Project Sources
 PROJECT_SOURCES = tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v
-VERILOG_SOURCES = $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+VERILOG_SOURCES = $(addprefix $(SRC_DIR)/, $(PROJECT_SOURCES))
 
-export SIM
-export TOPLEVEL_LANG
-export SRC_DIR
-export TEST_DIR
-export PROJECT_SOURCES
+export SIM TOPLEVEL_LANG SRC_DIR TEST_DIR PROJECT_SOURCES VERILOG_SOURCES
 
-# ──────────────────────────────────────── #
-# ============== Testing ================= #
+# ====================== BUILD MODE ======================
 
-# if NOT a Gate Level Test
-ifneq ($(GATES), yes) 
+ifeq ($(GATES), yes)
+SIM_BUILD       = sim_build/gl
+COMPILE_ARGS   += -DGL_TEST -DFUNCTIONAL -DUSE_POWER_PINS -DSIM -DUNIT_DELAY=\#1
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
+VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
+else
+SIM_BUILD       = sim_build/rtl
+COMPILE_ARGS   += -I$(SRC_DIR)
+endif
 
-# RTL Unit test simulation
+export SIM_BUILD COMPILE_ARGS
 
-SIM_BUILD		    = sim_build/rtl
-COMPILE_ARGS 		+= -I$(SRC_DIR)
+# =================== TEST DISCOVERY ====================
 
-export SIM_BUILD
-export VERILOG_SOURCES
-export COMPILE_ARGS
-
-# if the unit test flag is set
-ifneq ($(UNIT), no)
-
-# DISCOVER TESTS #
-
-# 1:  Find every Makefile below $(TEST_DIR)
+ifeq ($(UNIT), no)
+TESTS :=
+else
 TEST_MAKEFILES := $(shell find $(TEST_DIR) -type f -name $(PATTERN))
-$(info TEST_MAKEFILES = '$(TEST_MAKEFILES)')
-
-# 2: Exclude any Makefiles that explicitly say RUN = no, false, n (case-insensitive)
 MAKEFILES_WITH_RUN_FALSE := $(shell grep -iE '^[[:space:]]*RUN[[:space:]]*\??=[[:space:]]*(no|false|n)$$' $(TEST_MAKEFILES))
-
-# 3: Subtract false Makefiles from all Makefiles
 MAKEFILES_TO_RUN := $(filter-out $(MAKEFILES_WITH_RUN_FALSE), $(TEST_MAKEFILES))
-
-#  3: Extract unique directories
 RUN_DIRS := $(sort $(dir $(MAKEFILES_TO_RUN)))
-
-# 4:  Strip the root path  e.g. (sync ppu apu player)
-TEST_DIRS := $(sort $(patsubst %/,%,$(patsubst $(TEST_DIR)/%,%,$(dir $(MAKEFILES_TO_RUN)))))
-
+TEST_DIRS := $(sort $(patsubst %/,%,$(patsubst $(TEST_DIR)/%,%,$(RUN_DIRS))))
 TESTS ?= $(TEST_DIRS)
-$(info TEST LOCATIONS = '$(TESTS)')
+endif
 
-#  RUN TESTS  #
+# =================== RUN TESTS ====================
+
+ifdef TESTBENCH
+
+TESTBENCH_DIR := $(filter $(TESTBENCH), $(TESTS))
+
+ifeq ($(TESTBENCH_DIR),)
+$(error TESTBENCH '$(TESTBENCH)' not found. Available tests: $(TESTS))
+endif
+
+run_testbench:
+	@echo "Running testbench in: $(TESTBENCH_DIR)"
+	@$(MAKE) -C $(TEST_DIR)/$(TESTBENCH_DIR)
+
+else
 
 run_all_tests:
-	@$(foreach dir, $(TEST_DIRS), \
-		echo "Running tests in $(dir)" && \
-			$(MAKE) -C /$(TEST_DIR)/$(dir) || echo "Test failed in $(dir)."; \
-	)
-
-# .PHONY: $(TEST_DIRS) all
-
-# # Run all tests (ignore errors)
-# $(TEST_DIRS):\
-# 	-$(MAKE) -C $(TEST_DIR)/$@ || true
-
-# Default target = run all chosen tests
-all: $(TESTS) 
-
-# clean all tests
-.PHONY: clean
-clean:
-	@for d in $(TESTS); do \
-	$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
+	@for dir in $(TEST_DIRS); do \
+		echo "Running test in: $$dir"; \
+		$(MAKE) -C $(TEST_DIR)/$$dir || echo "Test failed in: $$dir"; \
 	done
 
 endif
 
+# =================== CLEAN ====================
+
+clean:
+	@for d in $(TESTS); do \
+		echo "Cleaning... $$d"; \
+		$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
+	done
+
+# =================== PHONY & DEFAULT ====================
+
+.PHONY: run_all_tests run_testbench clean all
+
+ifdef TESTBENCH
+all: run_testbench
 else
-
-# Gate level simulation:
-SIM_BUILD		= sim_build/gl
-COMPILE_ARGS    += -DGL_TEST
-COMPILE_ARGS    += -DFUNCTIONAL
-COMPILE_ARGS    += -DUSE_POWER_PINS
-COMPILE_ARGS    += -DSIM
-COMPILE_ARGS    += -DUNIT_DELAY=\#1
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
-VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
-
-# this gets copied in by the GDS action workflow
-VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
-
+all: run_all_tests
 endif
-
