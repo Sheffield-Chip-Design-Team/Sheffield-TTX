@@ -80,6 +80,7 @@ jobs:
           echo "|------|------|--------|" >> $GITHUB_STEP_SUMMARY
 
           for f in $(find test -type f -name '*_results.xml'); do
+          
             seed=$(xmllint --xpath 'string(//property[@name="random_seed"]/@value)' "$f" 2>/dev/null || echo "-")
             while IFS= read -r testcase; do
               name=$(echo "$testcase" | xmllint --xpath 'string(//@name)' - 2>/dev/null || echo "unknown")
@@ -88,6 +89,7 @@ jobs:
               else
                 status="PASS"
               fi
+
               echo "| $name | $seed | $status |" >> $GITHUB_STEP_SUMMARY
             done < <(xmllint --xpath '//testcase' "$f" 2>/dev/null || echo "")
           done
