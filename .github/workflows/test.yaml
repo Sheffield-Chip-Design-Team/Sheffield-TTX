@@ -51,11 +51,57 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
+      - name: Find all log files
+        id: find_logs
+        run: |
+          logs=$(find test -type f -name '*.log')
+          {
+            echo "logs<<EOF"
+            echo "$logs"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Find all vcd files
+        id: find_waveforms
+        run: |
+          vcds=$(find test -type f -name '*.vcd')
+          {
+            echo "vcds<<EOF"
+            echo "$vcds"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Test Summary
         uses: test-summary/action@v2.3
         with:
           paths: "${{ steps.find_results.outputs.results }}"
         if: always()
+
+      - name: Build Custom Test Summary
+        if: always()
+        run: |
+          echo "## Test Run Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Seed | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          for f in $(find test -type f -name '*_results.xml'); do
+            # extract first testcase name in file
+            testname=$(xmllint --xpath 'string(//testcase/@name)' "$f" 2>/dev/null || echo "unknown")
+            seed=$(grep -oP 'SEED=\K\d+' "$f" || echo "-")
+            if grep -q "<failure" "$f"; then
+              status="FAIL"
+            else
+              status="PASS"
+            fi
+            echo "| $testname | $seed | $status |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Errors from run_tests log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 100 latest.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: upload vcd
         if: success() || failure()
@@ -65,6 +111,7 @@ jobs:
           path: |
             ${{ steps.find_waveforms.outputs.vcds }}
             ${{ steps.find_results.outputs.results }}
+            ${{ steps.find_logs.outputs.logs }}
 
       - name: Report Test Status
         run: |
