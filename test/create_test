@@ -196,7 +196,6 @@ echo "[WTB] Instantiating UUTs from: $PROJ_SRCS"
 python3 ${SCRIPTS_DIR}/instantiate.py "${PROJ_SRCS}" >> ${WRAPPER_TB}
 
 cat >> "${WRAPPER_TB}" <<EOF
-
   initial begin
     \$dumpfile("${VCD_NAME}.vcd");
     \$dumpvars(0, ${TOPLEVEL});
@@ -217,7 +216,6 @@ $REGEN_ONLY && exit 0
 if [ ! -f "tb/${TEST_MODULE}.py" ]; then
 
 FIRST_PROJ_SRC=$(echo "$PROJ_SRCS" | head -n 1)
-echo "FIRST_PROJ_SRC: ${FIRST_PROJ_SRC}"
 python3 ${SCRIPTS_DIR}/setup_test.py "${FIRST_PROJ_SRC}" -name="${TEST_MODULE}"
 
 echo "[SETUP] Created tb/${TEST_MODULE}.py template"

@@ -43,7 +43,7 @@ def generate_instantiation(module_name, ports, declared_signals, instance_name="
     conn_lines = []
 
     if instance_name == "":
-        instance_name = f"u_{module_name}"
+        instance_name = f"{module_name}".lower()
 
     for direction, width, name in ports:
         if name in declared_signals:

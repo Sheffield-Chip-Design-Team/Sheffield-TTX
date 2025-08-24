@@ -25,7 +25,7 @@ if __name__ == "__main__":
     declared_signals = set()
     modules = extract_module_info(ast)
     for module_name, ports in modules:
-        print(f"// {module_name}")
+        print(f"  // {module_name}")
         print(generate_instantiation(module_name, ports, declared_signals))
         print(" ")
 
