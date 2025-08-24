@@ -1,7 +1,8 @@
 // Module: Hearts Controller
 // Author: Rupert Bowen
 
-module Hearts #(parameter [6:0] PlayerTolerance = 60)( 
+module Hearts #(parameter [6:0] PlayerTolerance = 60)
+ ( 
     input clk,
     input reset,
     input vsync,
@@ -45,8 +46,6 @@ module Hearts #(parameter [6:0] PlayerTolerance = 60)(
                 end
                 prev_vsync <= vsync;
             end 
-            
         end
-     
     end
 endmodule

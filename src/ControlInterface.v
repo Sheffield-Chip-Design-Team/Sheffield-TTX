@@ -67,6 +67,5 @@ module InputCollector (
 
         else  control_state <= 0;
     end
-
-
+    
 endmodule

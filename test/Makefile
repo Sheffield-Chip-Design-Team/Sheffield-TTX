@@ -1,3 +1,4 @@
+
 # ====================== SETUP ======================
 
 SIM            ?= icarus
@@ -33,6 +34,8 @@ export SIM_BUILD COMPILE_ARGS
 ifeq ($(UNIT), no)
 TESTS :=
 else
+ROOT_DIR := $(shell git rev-parse --show-toplevel)
+export ROOT_DIR
 TEST_MAKEFILES := $(shell find $(TEST_DIR) -type f -name $(PATTERN))
 MAKEFILES_WITH_RUN_FALSE := $(shell grep -iE '^[[:space:]]*RUN[[:space:]]*\??=[[:space:]]*(no|false|n)$$' $(TEST_MAKEFILES))
 MAKEFILES_TO_RUN := $(filter-out $(MAKEFILES_WITH_RUN_FALSE), $(TEST_MAKEFILES))
@@ -42,6 +45,7 @@ TESTS ?= $(TEST_DIRS)
 endif
 
 # =================== RUN TESTS ====================
+SHELL := /bin/bash
 
 ifdef TESTBENCH
 
@@ -52,33 +56,45 @@ $(error TESTBENCH '$(TESTBENCH)' not found. Available tests: $(TESTS))
 endif
 
 run_testbench:
-	@echo "Running testbench in: $(TESTBENCH_DIR)"
-	@$(MAKE) -C $(TEST_DIR)/$(TESTBENCH_DIR)
-
-else
-
-run_all_tests:
-	@for dir in $(TEST_DIRS); do \
-		echo "Running test in: $$dir"; \
-		$(MAKE) -C $(TEST_DIR)/$$dir || echo "Test failed in: $$dir"; \
-	done
-
+	@mkdir -p sim
+	@echo "Running tests in: $(TESTBENCH_DIR)"
+	@script -q -c "make -C $(TEST_DIR)/$(TESTBENCH_DIR)" /dev/null \
+		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim/latest.log); \
+	EXIT_CODE=$$?; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "Test failed in: $(TESTBENCH_DIR)"; \
+	fi
+	
 endif
 
-# =================== CLEAN ====================
+# Run all tests (default)
+run_all_tests:
+	@for dir in $(TEST_DIRS); do \
+		echo "Running tests in: $$dir"; \
+		mkdir -p $(ROOT_DIR)/test/unit/$$dir/sim; \
+		set -o pipefail; \
+		script -q -c "make -C $(TEST_DIR)/$$dir" /dev/null \
+			| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$$dir/sim/latest.log); \
+		EXIT_CODE=$$?; \
+		if [ $$EXIT_CODE -ne 0 ]; then \
+			echo "Test failed in: $$dir"; \
+		fi; \
+	done
+	@echo "Finished all tests!"
 
+# =================== CLEAN ====================
 clean:
 	@for d in $(TESTS); do \
 		echo "Cleaning... $$d"; \
 		$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
+		echo "Finished cleaning: $$d"; \
 	done
 
 # =================== PHONY & DEFAULT ====================
-
 .PHONY: run_all_tests run_testbench clean all
 
 ifdef TESTBENCH
-all: run_testbench
+all: run_testbench clean
 else
-all: run_all_tests
+all: run_all_tests clean
 endif

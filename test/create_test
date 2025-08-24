@@ -39,19 +39,15 @@ else
 fi
 
 # Initialize variables
+ROOT_DIR=""
+SRC_DIR=""
 UUT_SRCS=""
+PROJ_SRCS=""
 WRAPPER_TB=""
 TOPLEVEL=""
 TEST_MODULE=""
 ALIAS=""
 REGEN_ONLY=false
-# ===== Optional target directory =====
-if [ -n "$1" ] && [[ "$1" != -* ]]; then
-    TARGET_DIR="$1"
-    shift
-else
-    TARGET_DIR="."
-fi
 
 # ===== Parse flags =====
 while [[ "$#" -gt 0 ]]; do
@@ -122,6 +118,11 @@ WRAPPER_TB="tb/${WRAPPER_TB}"
 [[ "$WRAPPER_TB" != *.v ]] && WRAPPER_TB="${WRAPPER_TB}.v"
 TEST_MODULE="${TEST_MODULE%.py}"
 
+# define directories
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+SCRIPTS_DIR="${ROOT_DIR}/scripts"
+SRC_DIR="${ROOT_DIR}/src"
+
 # ===== Makefile generation =====
 NEW_ENV=$([ ! -f "Makefile" ] && echo true || echo false)
 
@@ -168,26 +169,33 @@ cleanup:
 EOF
 
 [ "$NEW_ENV" = true ] && echo "[SETUP] Generated new Makefile" || echo "[INFO] Regenerated Makefile"
-
-$REGEN_ONLY && exit 0
+PROJ_SRCS=$(for f in $UUT_SRCS; do echo "$SRC_DIR/$f"; done)
 
 # ===== Create directories =====
 [ ! -d "tb" ] && mkdir -p tb && echo "[SETUP] Created /tb folder"
 
-# ===== Wrapper Verilog file =====
-if [ ! -f "${WRAPPER_TB}" ]; then
+if [ ! -f "${WRAPPER_TB}" ] || [ "$REGEN_ONLY" = true ]; then
+
+if [ ! -f "${WRAPPER_TB}" ] ; then
+    echo "[SETUP] Generating wtb"
+elif [ "$REGEN_ONLY" = true ]; then
+    echo "[REGEN] Regenerating wtb"
+fi
+
 cat > "${WRAPPER_TB}" <<EOF
 \`default_nettype none
 \`timescale 1ns / 1ns
 
 module ${TOPLEVEL}();
-  reg clk;
-  reg rst_n;
 
-  wire input_wire;
-  wire output_wire;
+EOF
 
-  // Instantiate UUT here
+echo "[WTB] Instantiating UUTs from: $PROJ_SRCS"
+
+# === Call Python script to auto-generate instantiation ===
+python3 ${SCRIPTS_DIR}/instantiate.py "${PROJ_SRCS}" >> ${WRAPPER_TB}
+
+cat >> "${WRAPPER_TB}" <<EOF
 
   initial begin
     \$dumpfile("${VCD_NAME}.vcd");
@@ -196,33 +204,22 @@ module ${TOPLEVEL}();
   end
 endmodule
 EOF
-echo "[SETUP] Created ${WRAPPER_TB} template"
+
+echo "[SETUP] Generated ${WRAPPER_TB}"
 else
 echo "[INFO] ${WRAPPER_TB} already exists, skipping generation."
 fi
 
+$REGEN_ONLY && exit 0
+
 # ===== Python test file =====
+
 if [ ! -f "tb/${TEST_MODULE}.py" ]; then
-cat > "tb/${TEST_MODULE}.py" <<EOF
-import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, RisingEdge
 
-async def reset(uut, reset_duration=1):
-    uut._log.info("Resetting Module")
-    uut.rst_n.value = 0
-    await ClockCycles(uut.clk, reset_duration)
-    uut.rst_n.value = 1
+FIRST_PROJ_SRC=$(echo "$PROJ_SRCS" | head -n 1)
+echo "FIRST_PROJ_SRC: ${FIRST_PROJ_SRC}"
+python3 ${SCRIPTS_DIR}/setup_test.py "${FIRST_PROJ_SRC}" -name="${TEST_MODULE}"
 
-@cocotb.test()
-async def sanity_test(uut):
-    clock = Clock(uut.clk, 40, units="ns")
-    cocotb.start_soon(clock.start())
-    await ClockCycles(uut.clk, 1)
-    await reset(uut, 1)
-    await RisingEdge(uut.clk)
-    uut._log.info("Test Complete!")
-EOF
 echo "[SETUP] Created tb/${TEST_MODULE}.py template"
 else
 echo "[INFO] tb/${TEST_MODULE}.py already exists, skipping generation."
@@ -238,5 +235,10 @@ __pycache__/
 EOF
 echo "[SETUP] Created .gitignore"
 fi
+
+# ===== Cleanup parser artifacts =====
+[ -f "{$TARGET_DIR}/parser.out" ] && rm -f "{$TARGET_DIR}/parser.out" && echo "[CLEANUP] Removed parser.out"
+[ -f "{$ROOT_DIR}/parser.out" ] && rm -f "{$ROOT_DIR}/parser.out" && echo "[CLEANUP] Removed parser.out"
+[ -f "{$TARGET_DIR}/parsetab.py" ] && rm -f "{$TARGET_DIR}/parsetab.py" && echo "[CLEANUP] Removed parsetab.py"
 
 echo "[DONE] Environment setup complete!"
