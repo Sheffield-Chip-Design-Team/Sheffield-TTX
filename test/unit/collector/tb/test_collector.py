@@ -11,7 +11,7 @@ async def reset(uut, reset_duration=randint(1,10)):
     uut.reset.value = 0
 
 @cocotb.test()
-async def sanity_test(uut):
+async def test_collector_sanity(uut):
     # start clock
     clock = Clock(uut.clk, 40, units="ns")
     cocotb.start_soon(clock.start())

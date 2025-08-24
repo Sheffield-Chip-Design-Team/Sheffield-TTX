@@ -6,6 +6,8 @@ def generate_cocotb_test(module_name, ports, test_name):
     clk_signal = next((p[2] for p in ports if any(x in p[2].lower() for x in ['clk', 'clock'])), None)
     rst_signal = next((p[2] for p in ports if any(x in p[2].lower() for x in ['rst', 'reset'])), None)
     
+    sanity_name = test_name.removeprefix("test_")
+
     if not clk_signal or not rst_signal:
         return f"#[TESTGEN] Cannot auto-generate cocotb test for {module_name}: clock or reset not found.\n"
 
@@ -34,7 +36,7 @@ async def reset(uut, reset_duration=randint(1,10)):
     uut.{rst_signal}.value = {end_rst}
 
 @cocotb.test()
-async def sanity_test(uut):
+async def test_{sanity_name}_sanity(uut):
     # start clock
     clock = Clock(uut.{clk_signal}, 40, units="ns")
     cocotb.start_soon(clock.start())
