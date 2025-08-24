@@ -23,6 +23,9 @@ if [ "$#" -eq 0 ] || [[ " $* " == *" -h "* ]] || [[ " $* " == *" --help "* ]]; t
     show_help
 fi
 
+# TODO: add filelists for test regressions
+
+# run the regress script
 if [[ " $@ " =~ " regress " ]]; then
     args=()
     for arg in "$@"; do
@@ -33,6 +36,9 @@ if [[ " $@ " =~ " regress " ]]; then
     python3 ./../scripts/regress.py "${args[@]}"
     exit 1
 fi
+
+# run the regress simulation makefile
+# TODO: look into testbench runner script for better customisability for individual tests
 
 if [[ " $@ " =~ " sim " ]]; then
     args=()

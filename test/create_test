@@ -81,6 +81,7 @@ while [[ "$#" -gt 0 ]]; do
             ;;
     esac
 done
+
 # ===== Sanity checks =====
 if [ -z "$UUT_SRCS" ]; then
     echo "Error: Must provide at least one UUT source (-s)"
@@ -100,6 +101,7 @@ else
 fi
 
 # ===== Sanitize inputs =====
+
 UUT_SRCS="$(echo "$UUT_SRCS" | xargs)"
 WRAPPER_TB="$(echo "$WRAPPER_TB" | xargs)"
 TOPLEVEL="$(echo "$TOPLEVEL" | xargs)"
@@ -114,9 +116,14 @@ for src in $UUT_SRCS; do
 done
 UUT_SRCS="$UUT_SRCS_SANITIZED"
 
+# put wtb in the tb folder and add .v
 WRAPPER_TB="tb/${WRAPPER_TB}"
 [[ "$WRAPPER_TB" != *.v ]] && WRAPPER_TB="${WRAPPER_TB}.v"
-TEST_MODULE="${TEST_MODULE%.py}"
+
+# Remove .py extension from TEST_MODULE if present
+if [[ "$TEST_MODULE" == *.py ]]; then
+    TEST_MODULE="${TEST_MODULE%.py}"
+fi
 
 # define directories
 ROOT_DIR="$(git rev-parse --show-toplevel)"
@@ -212,7 +219,6 @@ fi
 $REGEN_ONLY && exit 0
 
 # ===== Python test file =====
-
 if [ ! -f "tb/${TEST_MODULE}.py" ]; then
 
 FIRST_PROJ_SRC=$(echo "$PROJ_SRCS" | head -n 1)
