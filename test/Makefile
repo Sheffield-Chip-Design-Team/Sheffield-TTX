@@ -56,15 +56,15 @@ $(error TESTBENCH '$(TESTBENCH)' not found. Available tests: $(TESTS))
 endif
 
 run_testbench:
-	@mkdir -p sim
-	@echo "Running tests in: $(TESTBENCH_DIR)"
-	@script -q -c "make -C $(TEST_DIR)/$(TESTBENCH_DIR)" /dev/null \
+	@mkdir -p $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim; \
+	echo "Running tests in: $(TESTBENCH_DIR)"; \
+	script -q -c "make -C $(TEST_DIR)/$(TESTBENCH_DIR)" /dev/null \
 		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim/latest.log); \
 	EXIT_CODE=$$?; \
 	if [ $$EXIT_CODE -ne 0 ]; then \
 		echo "Test failed in: $(TESTBENCH_DIR)"; \
 	fi
-	
+
 endif
 
 # Run all tests (default)
