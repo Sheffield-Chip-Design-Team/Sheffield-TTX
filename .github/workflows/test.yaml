@@ -1,5 +1,6 @@
 name: test
 on: [push, workflow_dispatch]
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -28,9 +29,12 @@ jobs:
           cd test
           make clean
           make
-          # make will return success even if the test fails, so check for failure in the results.xml
-          ! grep failure $(find . -type f -name '*_results.xml')    #
-            
+          # Guard against missing result files
+          files=$(find . -type f -name '*_results.xml')
+          if [ -n "$files" ]; then
+            ! grep -q "<failure" $files
+          fi
+
       - name: Find all results.xml files
         id: find_results
         run: |
@@ -61,20 +65,10 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
-      - name: Find all vcd files
-        id: find_waveforms
-        run: |
-          vcds=$(find test -type f -name '*.vcd')
-          {
-            echo "vcds<<EOF"
-            echo "$vcds"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
       - name: Test Summary
         uses: test-summary/action@v2.3
         with:
-          paths: "${{ steps.find_results.outputs.results }}"
+          paths: ${{ steps.find_results.outputs.results }}
         if: always()
 
       - name: Build Custom Test Summary
@@ -86,7 +80,6 @@ jobs:
           echo "|------|------|--------|" >> $GITHUB_STEP_SUMMARY
 
           for f in $(find test -type f -name '*_results.xml'); do
-            # extract first testcase name in file
             testname=$(xmllint --xpath 'string(//testcase/@name)' "$f" 2>/dev/null || echo "unknown")
             seed=$(grep -oP 'SEED=\K\d+' "$f" || echo "-")
             if grep -q "<failure" "$f"; then
@@ -98,16 +91,17 @@ jobs:
           done
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Errors from run_tests log" >> $GITHUB_STEP_SUMMARY
+          echo "### Errors from run_tests logs" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -n 100 latest.log >> $GITHUB_STEP_SUMMARY
+          first_log=$(find test -type f -name '*.log' | head -n1)
+          [ -n "$first_log" ] && tail -n 100 "$first_log" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-      - name: upload vcd
+      - name: Upload test artifacts
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-vcd
+          name: test-artifacts
           path: |
             ${{ steps.find_waveforms.outputs.vcds }}
             ${{ steps.find_results.outputs.results }}
@@ -115,7 +109,10 @@ jobs:
 
       - name: Report Test Status
         run: |
-          if grep failure $(find . -type f -name '*_results.xml'); then
-            echo "Test failure detected!"
-            exit 1
+          files=$(find . -type f -name '*_results.xml')
+          if [ -n "$files" ]; then
+            if grep -q "<failure" $files; then
+              echo "Test failure detected!"
+              exit 1
+            fi
           fi
