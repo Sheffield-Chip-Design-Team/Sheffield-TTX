@@ -80,21 +80,29 @@ jobs:
           echo "|------|------|--------|" >> $GITHUB_STEP_SUMMARY
 
           for f in $(find test -type f -name '*_results.xml'); do
-            testname=$(xmllint --xpath 'string(//testcase/@name)' "$f" 2>/dev/null || echo "unknown")
-            seed=$(grep -oP 'SEED=\K\d+' "$f" || echo "-")
-            if grep -q "<failure" "$f"; then
-              status="FAIL"
-            else
-              status="PASS"
-            fi
-            echo "| $testname | $seed | $status |" >> $GITHUB_STEP_SUMMARY
+            # Extract random seed once per file
+            seed=$(xmllint --xpath 'string(//property[@name="random_seed"]/@value)' "$f" 2>/dev/null || echo "-")
+
+            # Iterate over each testcase
+            while IFS= read -r testcase; do
+              name=$(echo "$testcase" | xmllint --xpath 'string(//@name)' - 2>/dev/null || echo "unknown")
+              if echo "$testcase" | grep -q "<failure"; then
+                status="FAIL"
+              else
+                status="PASS"
+              fi
+              echo "| $name | $seed | $status |" >> $GITHUB_STEP_SUMMARY
+            done < <(xmllint --xpath '//testcase' "$f" 2>/dev/null || echo "")
           done
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Errors from run_tests logs" >> $GITHUB_STEP_SUMMARY
+          echo "### Errors from run_tests log" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          first_log=$(find test -type f -name '*.log' | head -n1)
-          [ -n "$first_log" ] && tail -n 100 "$first_log" >> $GITHUB_STEP_SUMMARY
+          for log in $(find test -type f -name '*.log'); do
+            echo "--- $log ---" >> $GITHUB_STEP_SUMMARY
+            tail -n 50 "$log" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          done
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload test artifacts
