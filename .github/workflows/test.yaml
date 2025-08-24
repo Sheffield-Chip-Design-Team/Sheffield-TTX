@@ -10,9 +10,9 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install iverilog
+      - name: Install linux dependencies 
         shell: bash
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: sudo apt-get update && sudo apt-get install -y iverilog && sudo apt install -y libxml2-utils
 
       # Set Python up and install cocotb
       - name: Setup python
@@ -80,10 +80,7 @@ jobs:
           echo "|------|------|--------|" >> $GITHUB_STEP_SUMMARY
 
           for f in $(find test -type f -name '*_results.xml'); do
-            # Extract random seed once per file
             seed=$(xmllint --xpath 'string(//property[@name="random_seed"]/@value)' "$f" 2>/dev/null || echo "-")
-
-            # Iterate over each testcase
             while IFS= read -r testcase; do
               name=$(echo "$testcase" | xmllint --xpath 'string(//@name)' - 2>/dev/null || echo "unknown")
               if echo "$testcase" | grep -q "<failure"; then
@@ -100,7 +97,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           for log in $(find test -type f -name '*.log'); do
             echo "--- $log ---" >> $GITHUB_STEP_SUMMARY
-            tail -n 50 "$log" >> $GITHUB_STEP_SUMMARY
+            grep -i error "$log" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           done
           echo '```' >> $GITHUB_STEP_SUMMARY
