@@ -13,3 +13,4 @@ test/gate_level_netlist.v
 *.log
 env/
 !env/requirement.txt
+*.pyc
