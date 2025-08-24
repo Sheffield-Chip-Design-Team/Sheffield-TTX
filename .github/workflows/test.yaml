@@ -98,9 +98,14 @@ jobs:
           echo "### Errors from run_tests log" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           for log in $(find test -type f -name '*.log'); do
-            echo "--- $log ---" >> $GITHUB_STEP_SUMMARY
-            grep -i error "$log" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
+              echo "--- $log ---" >> $GITHUB_STEP_SUMMARY
+              if grep -i error "$log"; then
+                grep -i error "$log" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "No errors :)" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+              fi
           done
           echo '```' >> $GITHUB_STEP_SUMMARY
 
