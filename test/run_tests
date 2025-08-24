@@ -1,19 +1,26 @@
 #!/bin/bash
-
 # Written by JAK - v2.0
 # Cocotb Environment Test Run Script - Tiny Tapestation Project
 
-if [[ " $@ " =~ " help " ]]; then
+show_help() {
+    echo " "
+    echo "Cocotb Test Runner Script"
+    echo "James Ashie Kotey - SHaRC 2025"
     echo "Usage:"
     echo "  ./run_tests regress -runs <number> -width <number> [other options]"
     echo "  ./run_tests sim [-tb=<testbench_name>]"
-    echo "  ./run_tests help"
+    echo "  ./run_tests --help or -h"
     echo ""
     echo "Commands:"
     echo "  regress   Run regression tests with specified options."
     echo "  sim       Run simulation, optionally with a testbench."
     echo "  help      Show this help message."
     exit 0
+}
+
+# Show help if no args
+if [ "$#" -eq 0 ] || [[ " $* " == *" -h "* ]] || [[ " $* " == *" --help "* ]]; then
+    show_help
 fi
 
 if [[ " $@ " =~ " regress " ]]; then
