@@ -29,20 +29,28 @@ jobs:
           make clean
           make
           # make will return success even if the test fails, so check for failure in the results.xml
-          ! grep failure $(find . -type f -name 'results.xml')
-     
+          ! grep failure $(find . -type f -name '*_results.xml')    #
+            
       - name: Find all results.xml files
         id: find_results
         run: |
-          results=$(find test -type f -name '*_results.xml' | paste -sd "," -)
-          echo "results=$results" >> $GITHUB_OUTPUT   
+          results=$(find test -type f -name '*_results.xml')
+          {
+            echo "results<<EOF"
+            echo "$results"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Find all vcd files
         id: find_waveforms
         run: |
-          vcds=$(find test -type f -name '*.vcd' | paste -sd "," -)
-          echo "vcds=$vcds" >> $GITHUB_OUTPUT
-     
+          vcds=$(find test -type f -name '*.vcd')
+          {
+            echo "vcds<<EOF"
+            echo "$vcds"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Test Summary
         uses: test-summary/action@v2.3
         with:

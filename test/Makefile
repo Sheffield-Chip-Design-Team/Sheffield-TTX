@@ -94,7 +94,7 @@ clean:
 .PHONY: run_all_tests run_testbench clean all
 
 ifdef TESTBENCH
-all: run_testbench clean
+all: run_testbench 
 else
-all: run_all_tests clean
+all: run_all_tests 
 endif
