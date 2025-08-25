@@ -1,5 +1,8 @@
-# Auto-generated Makefile
+
+ifneq ($(GATES), yes)
 UUT_SRCS     ?= tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v
+endif
+
 WRAPPER_TB   ?= tb/top_wtb.v
 TOPLEVEL     ?= top_tb
 TEST_MODULE  ?= test_top
