@@ -23,7 +23,7 @@ export PYTHONPATH := $(abspath tb)
 VERILOG_SOURCES += $(TEST_DIR)$(WRAPPER_TB)
 VERILOG_SOURCES := $(sort $(VERILOG_SOURCES))
 MODULE = $(TEST_MODULE)
-export COCOTB_RESULTS_FILE=$(TOPLEVEL)_results.xml
+export COCOTB_RESULTS_FILE=results.xml
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

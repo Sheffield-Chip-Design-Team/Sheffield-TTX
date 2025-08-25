@@ -36,7 +36,7 @@ module top_tb ();
   
   // Dump the signals to a VCD file so it can be viewed in gtkwave.
   initial begin
-    $dumpfile("tts.vcd");
+    $dumpfile("tb.vcd");
     $dumpvars(0, top_tb);
     #1;
   end
