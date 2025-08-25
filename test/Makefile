@@ -1,4 +1,3 @@
-
 # ====================== SETUP ======================
 
 SIM            ?= icarus
@@ -26,75 +25,98 @@ else
 SIM_BUILD       = sim_build/rtl
 COMPILE_ARGS   += -I$(SRC_DIR)
 endif
-
 export SIM_BUILD COMPILE_ARGS
 
 # =================== TEST DISCOVERY ====================
 
-ifeq ($(UNIT), no)
-TESTS :=
-else
 ROOT_DIR := $(shell git rev-parse --show-toplevel)
 export ROOT_DIR
+
 TEST_MAKEFILES := $(shell find $(TEST_DIR) -type f -name $(PATTERN))
 MAKEFILES_WITH_RUN_FALSE := $(shell grep -iE '^[[:space:]]*RUN[[:space:]]*\??=[[:space:]]*(no|false|n)$$' $(TEST_MAKEFILES))
 MAKEFILES_TO_RUN := $(filter-out $(MAKEFILES_WITH_RUN_FALSE), $(TEST_MAKEFILES))
 RUN_DIRS := $(sort $(dir $(MAKEFILES_TO_RUN)))
 TEST_DIRS := $(sort $(patsubst %/,%,$(patsubst $(TEST_DIR)/%,%,$(RUN_DIRS))))
 TESTS ?= $(TEST_DIRS)
+
+# If user specified TESTBENCH, only run that
+ifdef TESTBENCH
+TESTBENCH_DIR := $(TESTBENCH)
 endif
 
-# =================== RUN TESTS ====================
+# =================== RUN TEST FUNCTIONS ====================
 SHELL := /bin/bash
 
-ifdef TESTBENCH
+define run_top_tests
+	@mkdir -p $(ROOT_DIR)/test/top/sim; \
+	echo "Running top level tests"; \
+	script -q -c "make -C $(ROOT_DIR)/test/top" /dev/null \
+		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/top/sim/latest.log); \
+	EXIT_CODE=$$?; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo "Top-level tests FAILED!"; \
+	fi
+	echo "Finished running top level tests!"
+endef
 
-TESTBENCH_DIR := $(filter $(TESTBENCH), $(TESTS))
-
-ifeq ($(TESTBENCH_DIR),)
-$(error TESTBENCH '$(TESTBENCH)' not found. Available tests: $(TESTS))
-endif
-
-run_testbench:
+define run_unit_test
 	@mkdir -p $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim; \
-	echo "Running tests in: $(TESTBENCH_DIR)"; \
+	echo "Running unit tests in: $(TESTBENCH_DIR)"; \
 	script -q -c "make -C $(TEST_DIR)/$(TESTBENCH_DIR)" /dev/null \
 		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim/latest.log); \
 	EXIT_CODE=$$?; \
 	if [ $$EXIT_CODE -ne 0 ]; then \
-		echo "Test failed in: $(TESTBENCH_DIR)"; \
+		echo "Unit test FAILED in: $(TESTBENCH_DIR)"; \
 	fi
+endef
 
-endif
-
-# Run all tests (default)
-run_all_tests:
+define run_all_unit_tests
 	@for dir in $(TEST_DIRS); do \
-		echo "Running tests in: $$dir"; \
+		echo "Running unit tests in: $$dir"; \
 		mkdir -p $(ROOT_DIR)/test/unit/$$dir/sim; \
 		set -o pipefail; \
 		script -q -c "make -C $(TEST_DIR)/$$dir" /dev/null \
 			| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$$dir/sim/latest.log); \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -ne 0 ]; then \
-			echo "Test failed in: $$dir"; \
+			echo "Unit test FAILED in: $$dir"; \
 		fi; \
-	done
-	@echo "Finished all tests!"
+	done; \
+	echo "Finished all unit tests!"
+endef
+
+define run_all_tests
+	echo "running all tests!"
+	$(call run_all_unit_tests)
+	$(call run_top_tests)
+endef
+
+# =================== TARGETS ====================
+
+# =================== PHONY ====================
+.PHONY: run_top_tests_target run_unit_test_target run_all_unit_tests_target run_all_tests_target clean all
+
+# =================== DEFAULT ====================
+
+all:
+ifeq ($(GATES),yes)
+	$(call run_top_tests)
+else ifeq ($(TESTBENCH),top)
+	$(call run_top_tests)
+else ifdef TESTBENCH
+	$(call run_unit_test)
+else
+	$(call run_all_tests)
+endif
 
 # =================== CLEAN ====================
 clean:
+	@echo "Cleaning all test directories..."
 	@for d in $(TESTS); do \
 		echo "Cleaning... $$d"; \
 		$(MAKE) -C $(TEST_DIR)/$$d clean || true; \
 		echo "Finished cleaning: $$d"; \
 	done
+	@echo "Cleaning top-level test..."
+	@$(MAKE) -C $(ROOT_DIR)/test/top clean || true
 
-# =================== PHONY & DEFAULT ====================
-.PHONY: run_all_tests run_testbench clean all
-
-ifdef TESTBENCH
-all: run_testbench 
-else
-all: run_all_tests 
-endif
