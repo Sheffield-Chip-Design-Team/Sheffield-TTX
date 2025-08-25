@@ -7,10 +7,8 @@ SRC_DIR        := $(CURRENT_DIR)../src
 TEST_DIR       := $(CURRENT_DIR)unit
 PATTERN        := Makefile
 
-# Project Sources
+# Project Sources .. Add new modules here!
 PROJECT_SOURCES = tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v Input/GamepadReceiver.v
-
-export SIM TOPLEVEL_LANG SRC_DIR TEST_DIR PROJECT_SOURCES VERILOG_SOURCES
 
 # ====================== BUILD MODE ======================
 
@@ -28,6 +26,7 @@ endif
 export SIM_BUILD COMPILE_ARGS
 export GATES
 
+export SIM TOPLEVEL_LANG SRC_DIR TEST_DIR PROJECT_SOURCES VERILOG_SOURCES
 # =================== TEST DISCOVERY ====================
 
 ROOT_DIR := $(shell git rev-parse --show-toplevel)
