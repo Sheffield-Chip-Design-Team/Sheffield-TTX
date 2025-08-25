@@ -70,7 +70,7 @@ module sheepLogic (
             1111       0000
     */
 
-    endmodule
+endmodule
 
     module rand_num (
         input wire clk,
@@ -97,7 +97,7 @@ module sheepLogic (
             
     end
 
-endmodule
+    endmodule
 
 
 
