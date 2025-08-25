@@ -9,7 +9,6 @@ PATTERN        := Makefile
 
 # Project Sources
 PROJECT_SOURCES = tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v Input/GamepadReceiver.v
-VERILOG_SOURCES = $(addprefix $(SRC_DIR)/, $(PROJECT_SOURCES))
 
 export SIM TOPLEVEL_LANG SRC_DIR TEST_DIR PROJECT_SOURCES VERILOG_SOURCES
 
@@ -24,8 +23,10 @@ VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 else
 SIM_BUILD       = sim_build/rtl
 COMPILE_ARGS   += -I$(SRC_DIR)
+VERILOG_SOURCES = $(addprefix $(SRC_DIR)/, $(PROJECT_SOURCES))
 endif
 export SIM_BUILD COMPILE_ARGS
+export GATES
 
 # =================== TEST DISCOVERY ====================
 
