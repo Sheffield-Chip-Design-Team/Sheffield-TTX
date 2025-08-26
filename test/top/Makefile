@@ -1,7 +1,4 @@
 # Makefile for top level tests
-ifneq ($(GATES), yes)
-UUT_SRCS     ?= tt_um_Enjimneering_TTS.v ControlInterface.v Player.v DragonHead.v DragonBody.v PPU.v SpriteROM.v Sync.v CollisionDetector.v DragonTarget.v Heart.v Sheep.v APU.v
-endif
 
 WRAPPER_TB   ?= tb/top_wtb.v
 TOPLEVEL     ?= top_tb
@@ -9,7 +6,13 @@ TEST_MODULE  ?= test_top
 RUN          ?= true
 
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+ifeq ($(GATES), yes)
+POST_SIM_DIR := $(CURRENT_DIR)/../
+else
 POST_SIM_DIR := sim
+endif
+
+
 TEST_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 ifeq ($(MAKELEVEL),0)
@@ -23,7 +26,7 @@ export PYTHONPATH := $(abspath tb)
 VERILOG_SOURCES += $(TEST_DIR)$(WRAPPER_TB)
 VERILOG_SOURCES := $(sort $(VERILOG_SOURCES))
 MODULE = $(TEST_MODULE)
-export COCOTB_RESULTS_FILE=results.xml
+export COCOTB_RESULTS_FILE=$(TEST_DIR)/../results.xml
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 

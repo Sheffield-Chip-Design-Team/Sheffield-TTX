@@ -46,23 +46,22 @@ endif
 
 # =================== RUN TEST FUNCTIONS ====================
 SHELL := /bin/bash
-
 define run_top_tests
-	@mkdir -p $(ROOT_DIR)/test/top/sim; \
-	echo "Running top level tests"; \
-	script -q -c "make -C $(ROOT_DIR)/test/top" /dev/null \
-		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/top/sim/latest.log); \
-	EXIT_CODE=$$?; \
-	if [ $$EXIT_CODE -ne 0 ]; then \
-		echo "Top-level tests FAILED!"; \
-	fi
-	echo "Finished running top level tests!"
+    @mkdir -p $(ROOT_DIR)/test/top/sim
+    @echo "Running top level tests"
+    @make -C $(ROOT_DIR)/test/top 2>&1 \
+        | tee >(sed -E 's/\x1B\[[0-9;]*[mK]//g' > $(ROOT_DIR)/test/top/sim/latest.log)
+    @EXIT_CODE=$$?; \
+    if [ $$EXIT_CODE -ne 0 ]; then \
+        echo "Top-level tests FAILED!"; \
+    fi
+    @echo "Finished running top level tests!"
 endef
 
 define run_unit_test
 	@mkdir -p $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim; \
 	echo "Running unit tests in: $(TESTBENCH_DIR)"; \
-	script -q -c "make -C $(TEST_DIR)/$(TESTBENCH_DIR)" /dev/null \
+	make -C $(TEST_DIR)/$(TESTBENCH_DIR) /dev/null \
 		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim/latest.log); \
 	EXIT_CODE=$$?; \
 	if [ $$EXIT_CODE -ne 0 ]; then \
@@ -75,7 +74,7 @@ define run_all_unit_tests
 		echo "Running unit tests in: $$dir"; \
 		mkdir -p $(ROOT_DIR)/test/unit/$$dir/sim; \
 		set -o pipefail; \
-		script -q -c "make -C $(TEST_DIR)/$$dir" /dev/null \
+		make -C $(TEST_DIR)/$$dir /dev/null \
 			| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$$dir/sim/latest.log); \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -ne 0 ]; then \
