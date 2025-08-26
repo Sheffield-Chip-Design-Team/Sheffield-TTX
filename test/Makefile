@@ -61,7 +61,7 @@ endef
 define run_unit_test
 	@mkdir -p $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim; \
 	echo "Running unit tests in: $(TESTBENCH_DIR)"; \
-	make -C $(TEST_DIR)/$(TESTBENCH_DIR) /dev/null \
+	make -C $(TEST_DIR)/$(TESTBENCH_DIR) \
 		| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$(TESTBENCH_DIR)/sim/latest.log); \
 	EXIT_CODE=$$?; \
 	if [ $$EXIT_CODE -ne 0 ]; then \
@@ -74,7 +74,7 @@ define run_all_unit_tests
 		echo "Running unit tests in: $$dir"; \
 		mkdir -p $(ROOT_DIR)/test/unit/$$dir/sim; \
 		set -o pipefail; \
-		make -C $(TEST_DIR)/$$dir /dev/null \
+		make -C $(TEST_DIR)/$$dir \
 			| tee >(sed -r "s/\x1B\[[0-9;]*[mK]//g" > $(ROOT_DIR)/test/unit/$$dir/sim/latest.log); \
 		EXIT_CODE=$$?; \
 		if [ $$EXIT_CODE -ne 0 ]; then \
