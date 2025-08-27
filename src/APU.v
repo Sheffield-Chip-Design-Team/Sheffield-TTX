@@ -4,7 +4,7 @@ module AudioProcessingUnit (
     input wire SheepDragonCollision,
     input wire SwordDragonCollision,
     input wire PlayerDragonCollision,
-    input wire frame_end,
+    // input wire frame_end,
     input wire [9:0] x,
     input wire [9:0] y,
     output wire sound
@@ -225,10 +225,21 @@ wire [3:0] knight_hurt_out = (knight_hurt_square & knight_hurt_active) ? 4'd12 :
 wire [5:0] mix = dragon_out + knight_hit_out + knight_hurt_out ;
 
 reg [5:0] pwm_counter;
-always @(posedge clk) begin
+
+reg sound_reg ;
+
+
+
+always @(posedge clk ) begin
+    if (reset)begin
+        sound_reg <= 0;
+        pwm_counter <= 0;
+    end else begin
+    sound_reg <= (pwm_counter < mix);
     pwm_counter <= pwm_counter + 1;
 end
+end
 
-assign sound = (pwm_counter < mix);
+assign sound = sound_reg;
 
 endmodule
