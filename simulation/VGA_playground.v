@@ -3,18 +3,13 @@
  * Copyright (c) 2024 Tiny Tapeout LTD
  * SPDX-License-Identifier: Apache-2.0
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
- * Abdulatif Babli, K Arjunav, Cameron Brizland
+ * Abdulatif Babli, K Arjunav, Cameron Brizland, Rupert Bowen
  * Last Updated: 01/12/2024 @ 21:26:37
 */
 
-// BUILD TIME: 2025-02-25 10:15:32.711565 
-
-
-// GDS: https://gds-viewer.tinytapeout.com/?model=https%3A%2F%2Fsheffield-chip-design-team.github.io%2FSheffield-TTX%2F%2Ftinytapeout.gds.gltf
 
 // TT Pinout (standard for TT projects - can't change this)
 module tt_um_vga_example ( 
-
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -25,21 +20,19 @@ module tt_um_vga_example (
     input  wire       rst_n    // reset_n - low to reset   
 );
 
-    //system signals
+    // Controller signals
     wire NES_Clk;
     wire NES_Latch;
-    wire NES_Data = 0;
+    wire NES_Data;
 
+    // NES Input Stub
     assign {NES_Latch,NES_Clk} = 2'b0;
 
-    /*
-        NES/SNES RECIEVER MODULE
-    */
-
-    // input signals
-    wire [9:0] input_data; // register to hold the 5 possible player actions
-
-    InputController ic(  // change these mappings to change the controls in the simulator
+    // action signal for player logic
+    wire [9:0] input_data; 
+    
+    // Bypass the reciver module (for simulation)
+    InputCollector ic(  
         .clk(clk),
         .reset(frame_end),
         .up(ui_in[0]),
@@ -49,16 +42,16 @@ module tt_um_vga_example (
         .attack(ui_in[4]),
         .control_state(input_data)
     );
+
     wire PlayerDragonCollision;
     wire SwordDragonCollision;
     wire SheepDragonCollision;
     
-
-     CollisionDetector collisionDetector (
+    CollisionDetector collisionDetector (
         .clk(clk),
         .reset(vsync),
         .playerPos(player_pos),
-        .swordPos(sword_position),
+        .swordPos(sword_pos),
         .sheepPos(sheep_pos),
         .activeDragonSegments(VisibleSegments),
         .dragonSegmentPositions(
@@ -74,31 +67,59 @@ module tt_um_vga_example (
         .sheepDragonCollision(SheepDragonCollision)
     );
 
-    //player logic
-    reg [1:0] playerLives = 3;
-    wire [7:0] player_pos;   // player position xxxx_yyyy
-    // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
+    wire playerHurt;
+
+    Hearts #(
+        .PlayerTolerance(1)
+    ) hearts (
+        .clk(clk),
+        .vsync(vsync),
+        .reset(~rst_n),
+        .PlayerDragonCollision(PlayerDragonCollision),
+        .PlayerHurt(playerHurt),
+        .playerLives(playerLives)
+    );
+
+    // player variables
+    wire [1:0] playerLives;          // max lives: 3
+    wire [7:0] player_pos;           // player position xxxx_yyyy
+                                     // orientation and direction: 00 - up, 01 - right, 10 - down, 11 - left  
     wire [1:0] player_orientation;   // player orientation 
-    wire [1:0] player_direction;   // player direction
+    wire [1:0] player_direction;     // player direction
     wire [3:0] player_sprite;
 
-    wire [7:0] sword_position; // sword position xxxx_yyyy
-    wire [3:0] sword_visible;
+    // sword variables
+    wire [7:0] sword_pos;           // sword position xxxx_yyyy
+    wire [3:0] sword_sprite;        // used to toggle sword visibility
     wire [1:0] sword_orientation;   // sword orientation 
+
+    // sheep variables
+    wire [7:0] sheep_pos;           // 8-bit position (4 bits for X, 4 bits for Y)
+    wire [3:0] sheep_sprite;
+
+    sheepLogic sheep (
+        .clk(ui_in[7]), 
+        .reset(~rst_n),
+        .read_enable(1), 
+        .dragon_pos(dragon_position), 
+        .player_pos(player_pos),
+        .sheep_pos(sheep_pos),
+        .sheep_sprite(sheep_sprite)
+    );
 
     PlayerLogic playlogic(
         .clk(clk),
-        .reset(~rst_n),
+        .reset(~rst_n | playerHurt),
         .input_data(input_data),
         .trigger(frame_end),
 
+        .player_sprite(player_sprite),
         .player_pos(player_pos),
         .player_orientation(player_orientation),
         .player_direction(player_direction),
-        .player_sprite(player_sprite),
 
-        .sword_position(sword_position),
-        .sword_visible(sword_visible),
+        .sword_visible(sword_sprite),
+        .sword_position(sword_pos),
         .sword_orientation(sword_orientation)
     );
 
@@ -110,28 +131,49 @@ module tt_um_vga_example (
     DragonHead dragonHead( 
         .clk(clk),
         .reset(~rst_n),
-        .targetPos(player_pos),
+        .targetPos(target_pos),
         .vsync(vsync),
         .dragon_direction(dragon_direction),
         .dragon_pos(dragon_position),
-        .movement_counter(movement_delay_counter)// Counter for delaying dragon's movement otherwise sticks to player
+        .movement_counter(movement_delay_counter)  // Counter for delaying dragon's movement otherwise sticks to player
     );
 
-    wire [9:0]   Dragon_1 ;
-    wire [9:0]   Dragon_2 ;
-    wire [9:0]   Dragon_3 ;
-    wire [9:0]   Dragon_4 ;
-    wire [9:0]   Dragon_5 ;
-    wire [9:0]   Dragon_6 ;
-    wire [9:0]   Dragon_7 ;
+    wire [9:0]  Dragon_1;
+    wire [9:0]  Dragon_2;
+    wire [9:0]  Dragon_3;
+    wire [9:0]  Dragon_4;
+    wire [9:0]  Dragon_5;
+    wire [9:0]  Dragon_6;
+    wire [9:0]  Dragon_7;
 
     wire [6:0] VisibleSegments;
+    wire [7:0] target_pos;
 
+    DragonTarget dragonBrain(
+        .clk(clk),
+        .reset(~rst_n),
+        .trigger(frame_end),
+        .target_reached(Dragon_1[7:0] == target_pos),
+        .dragon_hurt(SwordDragonCollision),
+        .player_pos(player_pos), 
+        .sheep_pos(sheep_pos),
+        .target_pos(target_pos)
+    );
+    
+    // delay the heal and hit for the dragon
+
+    reg ShDC_Delay;
+    reg SwDc_Delay;
+
+    always@(posedge clk) if(rst_n) ShDC_Delay <= SheepDragonCollision; else ShDC_Delay <= 0;
+    always@(posedge clk) if(rst_n) SwDc_Delay <= SwordDragonCollision; else SwDc_Delay <= 0;
+    
     DragonBody dragonBody(
 
         .clk(clk),
         .reset(~rst_n),
-        .hit(SwordDragonCollision),
+        .heal(SheepDragonCollision & ~ShDC_Delay),
+        .hit(SwordDragonCollision & ~SwDc_Delay),
         .Dragon_Head({dragon_direction, dragon_position}),
         .movementCounter(movement_delay_counter),
         .vsync(vsync),
@@ -146,52 +188,33 @@ module tt_um_vga_example (
         .Display_en(VisibleSegments)
     );
 
-    // sheep logic
-    wire [7:0] sheep_pos; // 8-bit position (4 bits for X, 4 bits for Y)
-    wire [3:0] sheep_sprite;
-
-    sheepLogic sheep (
-        .clk(ui_in[7]), 
-        .reset(~rst_n),
-        .read_enable(1), 
-        .dragon_pos(dragon_position), 
-        .player_pos(player_pos),
-        .sheep_pos(sheep_pos),
-        .sheep_sprite(sheep_sprite)
-    );
-
     // Picture Processing Unit
-    // Entity input structure: ([17:14] spriteID, [13:12] Orientation, [11:4] Location(tile), [3] Flip, [2:0] Array(Enable)). 
-    // Set the entity ID to 4'1111 for unused channels.
-    // Set the array to 3'b000 for temporary disable channels.
-    // Sprite ID    -   0: Heart 1: Sword, 2: Gnome_Idle_1, 3: Gnome_Idle_2, 4: Dragon_Wing_Up,
-    //                  5: Dragon_Wing_Down, 6: Dragon_Head, 7: Sheep_Idle_1, 8: Sheep_Idle_2
-    // Orientation  -   0: Up, 1: right , 2: down, 3: left
-    // Location     -   8'bxxxx_yyyyy [xcoord (0-15), ycoord (0-11)]
-    // Flip bit     -   0 means not flipped, 1 means flipped.
-    // Array        -   repeat the tile x times in the orientation direction.
 
     PictureProcessingUnit ppu (
 
         .clk_in         (clk),
         .reset          (~rst_n), 
-        .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),      // player
-        .entity_2       ({4'b0001, sword_orientation, sword_position, 3'b000,sword_visible[0]}),     // sword
-        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                           // sheep
+        // game entitites 
+        .entity_1       ({player_sprite, player_orientation , player_pos,  4'b0001}),                // player
+        .entity_2       ({sword_sprite, sword_orientation, sword_pos, 4'b0001}),                // sword
+        .entity_3       ({4'b0111, 2'b00, sheep_pos, 4'b0001}) ,                                     // sheep
         .entity_4       (18'b1111_11_1110_0000_0001),
         .entity_5       (18'b1111_11_1101_0000_0001),
         .entity_6       (18'b1111_11_1111_1111_0001),
-        .entity_7       ({14'b0000_00_1111_0000, 2'b00, playerLives}),                     // heart
+        .entity_7       ({14'b0000_00_1111_0000, 2'b00, playerLives}),                               // heart
         .entity_8       (18'b1111_11_1111_1111_0001),
-        .dragon_1       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                    // dragon parts
+        // dragon parts 
+        .dragon_1       ({4'b0110,Dragon_1,3'b000,VisibleSegments[0]}),                              // dragon parts
         .dragon_2       ({4'b0100,Dragon_2,3'b000,VisibleSegments[1]}),  
         .dragon_3       ({4'b0100,Dragon_3,3'b000,VisibleSegments[2]}),  
         .dragon_4       ({4'b0100,Dragon_4,3'b000,VisibleSegments[3]}),
         .dragon_5       ({4'b0100,Dragon_5,3'b000,VisibleSegments[4]}),
-        .dragon_6       ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),        
+        .dragon_6       ({4'b0100,Dragon_6,3'b000,VisibleSegments[5]}),  
+        .dragon_7       ({4'b0100,Dragon_7,3'b000,VisibleSegments[6]}),    
+        // counter position
         .counter_V      (pix_y),
         .counter_H      (pix_x),
-
+        // output color (to VGA)
         .colour         (pixel_value)
     );
 
@@ -204,7 +227,7 @@ module tt_um_vga_example (
 
     // timing signals
     wire frame_end;
-    wire enable_input;
+
     // sync generator unit 
     sync_generator sync_gen (
         .clk(clk),
@@ -215,20 +238,8 @@ module tt_um_vga_example (
         .screen_hpos(pix_x),
         .screen_vpos(pix_y),
         .frame_end(frame_end),
-        .input_enable(enable_input)
+        .input_enable()
     );
-         APU apu(
-      .clk(clk),
-      .reset(~rst_n),
-      .frame_end(frame_end),
-      .PlayerDragonCollision(PlayerDragonCollision),
-      .SwordDragonCollision(SwordDragonCollision),
-      .SheepDragonCollision(SheepDragonCollision),
-      .x(pix_x),
-      .y(pix_y),
-      .sound(sound)
-    );
-
 
     // outpout colour signals
     wire pixel_value;
@@ -245,18 +256,31 @@ module tt_um_vga_example (
         B <= 0;
         
         end else begin
+            
             if (video_active) begin // display output color from Frame controller unit
 
-                if (PlayerDragonCollision == 0) begin // no collision - green
+                if (PlayerDragonCollision == 0 & SwordDragonCollision == 0) begin // no collision - green
                     R <= pixel_value ? 2'b11 : 0;
                     G <= pixel_value ? 2'b11 : 2'b11;
                     B <= pixel_value ? 2'b11 : 0;
                 end
 
-                if (PlayerDragonCollision == 1) begin // collision - red
+                if (PlayerDragonCollision == 1 & SwordDragonCollision == 0) begin // dragon hurs playher rtcollision - red
                     R <= pixel_value ? 2'b11 : 2'b11;
                     G <= pixel_value ? 2'b11 : 0;
                     B <= pixel_value ? 2'b11 : 0;
+                end
+
+                if (PlayerDragonCollision == 0 & SwordDragonCollision == 1) begin // sword hurts dragon hurts dragon collision - blue
+                    R <= pixel_value ? 2'b11 : 2'b0;
+                    G <= pixel_value ? 2'b11 : 2'b0;
+                    B <= pixel_value ? 2'b11 : 2'b11;
+                end
+
+               if (PlayerDragonCollision == 1 & SwordDragonCollision == 1) begin // both collision simultaneouslt  sword hurts dragon hurts dragon collision - blue
+                    R <= pixel_value ? 2'b11 : 2'b11;
+                    G <= pixel_value ? 2'b11 : 2'b00;
+                    B <= pixel_value ? 2'b11 : 2'b11;
                 end
 
             end else begin
@@ -267,33 +291,39 @@ module tt_um_vga_example (
         end
     end
 
+    // Audio signals
+    wire sound;
+
+    AudioProcessingUnit apu( 
+      .clk(clk),
+      .reset(~rst_n),
+      .frame_end(frame_end),
+      .PlayerDragonCollision(PlayerDragonCollision),
+      .x(pix_x),
+      .y(pix_y),
+      .sound(sound)
+    );
+    
     // System IO Connections
-    assign uio_oe  = 8'b0000_0011;
-    assign uio_out[1:0] = {NES_Latch, NES_Clk};
-    assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
+    assign NES_Data = ui_in[0];
+    assign uio_oe   = 8'b1000_0011;
+    assign uio_out  = {sound, 5'b00000, NES_Latch, NES_Clk};
+    assign uo_out   = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
-    assign uio_out[7:2] = 0;
-    wire _unused_ok = &{ena, uio_in, ui_in[6:5], 
-    NES_Data, 
-    SwordDragonCollision, 
-    SheepDragonCollision, 
-    player_direction, 
-    sheep_sprite, 
-    enable_input, 
-    Dragon_7[9:8]}; 
+    wire _unused_ok = &{ena, uio_in[7:1]}; 
 
 endmodule
-
+   
 //================================================
 
 // Module : Input Collector
-// Author: James Adhie Kotey
+// Author: James Ashie Kotey
 /* 
-
-    Last Updated: 02/01/2025 @ 19:00:14
+    Last Updated: 16:21 16/06/2025 
+    
     Description:
-                takes input signals from ui_in (GUI) and outputs 1 on each button state when a button has been pressed or released.
+        takes input signals from the controller/simulators and outputs 1 on each button state when a button has been pressed or released.
 
     Control State Structure:
                 0: UP 
@@ -302,10 +332,9 @@ endmodule
                 3: RIGHT
                 4: ACTION
 
-    
 */
 
-module InputController (
+module InputCollector (
 
     input wire clk,
     input wire reset,
@@ -356,8 +385,7 @@ module InputController (
 
         else  control_state <= 0;
     end
-
-
+    
 endmodule
 
 //================================================
@@ -489,268 +517,61 @@ module Comparator (
 
 endmodule
 //================================================
-// Module: Player Logic
+// Module: Hearts Controller
+// Author: Rupert Bowen
 
-/*
-   Last Updated: 27/12/2024 @ 00:15:32
-   Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
-   Description:    
-        Player Logic FSM - movement and attack control. 
-        Collisions, lives and respawns managed centrally in the Game State Controller.
-*/
-
-module PlayerLogic (
-
-    input            clk,
-    input            reset,
-    input wire       trigger,
-    input wire [9:0] input_data,
-
-    output reg [7:0] player_pos,
-    output reg [1:0] player_orientation,  // player orientation
-    output reg [1:0] player_direction,    // player direction
-    output reg [3:0] player_sprite,
-
-    output reg [7:0] sword_position,    // sword position xxxx_yyyy
-    output reg [3:0] sword_visible,
-    output reg [1:0] sword_orientation  // sword orientation
-);
-
-  // State definitions
-  localparam IDLE_STATE = 2'b00;  // Move when there is input from the controller
-  localparam ATTACK_STATE = 2'b01;  // Sword appears where the player is facing
-  localparam MOVE_STATE = 2'b10;  // Wait for input and stay idle
-  localparam ATTACK_DURATION = 6'b000_100;
-
-  reg [5:0] player_anim_counter;
-  reg [5:0] sword_duration;  // how long the sword stays visible - (SET BY ATTACK DURATION)
-
-  // player state register
-  reg [1:0] current_state;
-  reg [1:0] next_state;
-  reg action_complete;  // flag to indicate that the action has been completed
-
-  // sword direction logic register
-  reg [1:0] last_direction;
-  reg direction_stored;
-
-  reg [4:0] input_buffer;  // keeps input till there is a release
-
-  always @(posedge clk) begin // Movement Input FSM
-    if (~reset) begin
-        if (input_data[9:5] != 5'b00000) begin
-            input_buffer <= input_data[9:5];
-        end else if (input_data[4:0] != 5'b00000) begin
-        // reset input buffer when buttons are released
-        input_buffer <= 0;
-      end
-      if (trigger) begin
-        // switch between states on trigger
-        current_state <= next_state;  // Update state
-      end
-    end else begin
-      input_buffer  <= 0;
-      current_state <= 0;
+module Hearts #(parameter [6:0] PlayerTolerance = 60)
+ ( 
+    input clk,
+    input reset,
+    input vsync,
+    input PlayerDragonCollision,
+    output reg PlayerHurt,
+    output reg [1:0] playerLives
+    );
+    reg [6:0] buffer = 0;
+    reg prev_vsync = 0;
+    
+    initial begin
+        playerLives <= 3;
     end
-  end
+    
+    always @(posedge clk) begin
+        
+        PlayerHurt = 0;
 
-
-  always @(posedge clk) begin  // animation FSM
-
-    if (~reset) begin
-
-      if (trigger) begin
-
-        if (sword_visible == 4'b0001) begin
-          sword_duration <= sword_duration + 1;
-        end else begin
-          sword_duration <= 0;
+        if (reset) begin //When reset goes high, set player lives to 3
+            playerLives <= 3;
         end
 
-        if (player_anim_counter == 20) begin
-          player_anim_counter <= 0;
-          player_sprite <= 4'b0011;
-        end else if (player_anim_counter == 7) begin
-          player_sprite <= 4'b0010;
-          player_anim_counter <= player_anim_counter + 1;
-        end else begin
-          player_anim_counter <= player_anim_counter + 1;
-
+        else begin
+            if (vsync != prev_vsync) begin
+                if (vsync) begin //Posedge Vsync
+                    if(PlayerDragonCollision) begin
+                        if (PlayerTolerance > buffer) begin //Increments buffer until reaches defined value - Provides tolerance to the player
+                            buffer <= buffer +1;
+                        end
+                        else begin
+                            if (playerLives > 0) begin  // Player is damaged
+                                playerLives <= playerLives -1;
+                                PlayerHurt = 1;
+                            end
+                        buffer <= 0;
+                        end
+                    end
+                    else begin
+                        buffer <=0;
+                    end 
+                end
+                prev_vsync <= vsync;
+            end 
         end
-      end end else begin  // reset attack
-        sword_duration <= 0;
-        player_anim_counter <= 0;
     end
-  end
-
-  always @(posedge clk) begin  // Player State FSM
-
-    if (~reset) begin
-
-      // Reset the action_complete flag when buttons are released
-      if (input_data[4:0] != 5'b00000) begin
-        action_complete <= 0;
-        direction_stored <= 0;
-      end
-
-      case (current_state)
-
-        IDLE_STATE: begin
-
-          sword_position <= 0;
-
-          case (input_buffer[4])
-            1: begin  // attack
-              if(~action_complete) begin
-                next_state <= ATTACK_STATE;
-              end
-            end
-
-            0: begin  // no attack
-              // Can't access a switch to MOVE_STATE until action_complete is reset to 0
-              if (input_buffer[3:0] != 0 && ~action_complete) begin
-                next_state <= MOVE_STATE;
-              end
-            end
-
-
-            default: begin
-              next_state <= IDLE_STATE;  // Default case, stay in IDLE state
-            end
-          endcase
-        end
-
-        MOVE_STATE: begin
-          // Can't move if action is already complete
-          if (~action_complete) begin
-            // Move player based on direction inputs and update orientation
-            // Check boundary for up movement
-            if (input_buffer[0] == 1 && player_pos[3:0] > 4'b0001) begin
-              player_pos <= player_pos - 1;  // Move up
-              player_direction <= 2'b00;
-              action_complete <= 1;
-            end
-
-            // Check boundary for down movement
-            if (input_buffer[1] == 1 && player_pos[3:0] < 4'b1011) begin
-              player_pos <= player_pos + 1;  // Move down
-              player_direction <= 2'b10;
-              action_complete <= 1;
-            end
-
-            // Check boundary for left movement
-            if (input_buffer[2] == 1 && player_pos[7:4] > 4'b0000) begin
-              player_pos <= player_pos - 16;  // Move left
-              player_orientation <= 2'b11;
-              player_direction <= 2'b11;
-              action_complete <= 1;
-            end
-
-            // Check boundary for right movement
-            if (input_buffer[3] == 1 && player_pos[7:4] < 4'b1111) begin
-              player_pos <= player_pos + 16;  // Move right
-              player_orientation <= 2'b01;
-              player_direction <= 2'b01;
-              action_complete <= 1;
-            end
-          end else begin
-            next_state <= IDLE_STATE;  // Return to IDLE after moving
-          end
-
-        end
-
-        ATTACK_STATE: begin
-          if(~action_complete && input_buffer[4]!=0) begin
-            // Check if the sword direction is specified by the player
-            if(input_buffer[3:0] != 0) begin
-              if (input_buffer[0] == 1) begin
-                last_direction   <= 2'b00;
-                player_direction <= 2'b00;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[1] == 1) begin
-                last_direction   <= 2'b10;
-                player_direction <= 2'b10;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[2] == 1) begin
-                last_direction   <= 2'b11;
-                player_direction <= 2'b11;
-                direction_stored <= 1;
-              end
-
-              if (input_buffer[3] == 1) begin
-                last_direction   <= 2'b01;
-                player_direction <= 2'b01;
-                direction_stored <= 1;
-              end
-            end
-            // if not, use the last direction
-            else begin
-              last_direction <= player_direction;
-              direction_stored <= 1;
-            end
-          end
-
-          if (direction_stored) begin
-            // Set sword orientation
-            sword_orientation <= last_direction;
-
-            // Set sword location
-            if (last_direction == 2'b00) begin  // player facing up
-              sword_position <= player_pos - 1;
-            end
-
-            if (last_direction == 2'b10) begin  // player facing down
-              sword_position <= player_pos + 1;
-            end
-
-            if (last_direction == 2'b11) begin  // player facing left
-              sword_position <= player_pos - 16;
-            end
-
-            if (last_direction == 2'b01) begin  // player facing right
-              sword_position <= player_pos + 16;
-            end
-
-            sword_visible <= 4'b0001; // Make sword visible
-            // reset
-            action_complete <= 1; // Set action complete flag
-            direction_stored <= 0; // reset direction_stored flag
-          end
-
-          if (sword_duration == ATTACK_DURATION) begin // Attack State duration
-            sword_visible  <= 4'b0000; // Make sword invisible
-            next_state <= IDLE_STATE;  // Return to IDLE after attacking
-          end
-        end
-
-
-        default: begin
-          next_state <= IDLE_STATE;  // Default case, stay in IDLE state
-        end
-      endcase
-
-    end else begin
-      next_state <= 0;
-      player_pos <= 8'b0001_0011;
-      player_orientation <= 2'b01;
-      player_direction <= 2'b01;
-      action_complete <= 0;
-      direction_stored <= 0;
-    end
-  end
-
 endmodule
 
 //================================================
-
 // Module : Dragon Head
 // Author: Abdulatif Babli
-
-
 /* 
     Description: 
         The dragon head module contains the movement logic for the dragon's head. The body segments then move in turn
@@ -788,7 +609,9 @@ module DragonHead (
         if (~reset)begin
         
             pre_vsync <= vsync;
-            
+           
+            // todo : dragon location should reset to top left
+
             if(pre_vsync != vsync && pre_vsync == 0) begin
                 
                 if (movement_counter < 6'd12) begin
@@ -861,27 +684,13 @@ endmodule
             
 */
 
-// Module : Dragon Body
-// Author: Bowen Shi
-
-// Changes
-// renamed ports
-//  OrenPositrion -> Dragon_Head
-//  State
-/* 
-    Description:
-    The Dragon body segment 
-            
-*/
-
 module DragonBody(
 
     input clk,
     input reset,
     input vsync,
-    input move,
-    input hit,
-    input heal,          // MUST be a PULSE
+    input heal,                         // grow
+    input hit,                          // shrink
     input [5:0] movementCounter,
     input [9:0] Dragon_Head,            // [9:8] orientation, [7:0]  position
 
@@ -937,23 +746,18 @@ module DragonBody(
 
     always @( posedge clk )begin
         
-        if(~reset) begin 
+        if(~reset) begin
             case(1'b1) 
-                move: begin
-                    Display_en <= Display_en;
-                end
                 heal: begin
                     Display_en <= (Display_en << 1) | 7'b0000001;
                 end
                 hit: begin
                     Display_en <= Display_en >> 1;
                 end
-                default: begin
-                    Display_en <= Display_en;
-                end
+                default: Display_en <= Display_en;
             endcase
         end else begin
-            Display_en <= 7'b1111111;
+            Display_en <= 7'b0000001;
         end
     end
 
@@ -1031,7 +835,7 @@ module sheepLogic (
             1111       0000
     */
 
-    endmodule
+endmodule
 
     module rand_num (
         input wire clk,
@@ -1058,18 +862,19 @@ module sheepLogic (
             
     end
 
-endmodule
+    endmodule
 
 
 
 
 //================================================
 // Module - Sync Unit Ouput Module 
+// Adapted from hv_sync_generator from VGAsimulator demo
 
 /*
     Description: 
             Generates sync pulses for VGA monitor, (H-SYNC ,V-SYNC) targeted to 640 * 480 output, 
-            Pixel coordinates for the graphics controller,
+            Pixel coordinates for the graphics controller,§
             and sync signals for the game logic units.
 
     Build Arguments
@@ -1091,7 +896,6 @@ module sync_generator (
     
     reg [9:0] hpos = 0;
     reg [9:0] vpos = 0;
-
 
     // declarations for TV-simulator sync parameters
 
@@ -1130,36 +934,55 @@ module sync_generator (
     // horizontal position counter
 
     always @(posedge clk) begin
-        hsync <= (hpos >= H_SYNC_START && hpos <= H_SYNC_END);
-        if (hmaxxed) begin
-        hpos <= 0;
-        end else begin
-        hpos <= hpos + 1;
+
+        if (reset) begin
+            hpos <= 0;
+            hsync <= 0; // active high pulse
+        end 
+
+        else begin
+            hsync <= (hpos >= H_SYNC_START && hpos <= H_SYNC_END);
+            if (hmaxxed) begin
+            hpos <= 0;
+            end else begin
+            hpos <= hpos + 1;
+            end
         end
     end
 
     // vertical position counter
 
     always @(posedge clk) begin
-        vsync <= (vpos >= V_SYNC_START && vpos <= V_SYNC_END);
-        if (hmaxxed)
-        if (vmaxxed) begin
-        vpos <= 0;
-        end else begin
-            vpos <= vpos + 1;
+
+        if (reset) begin
+            vpos <= 0;
+            vsync <= 0;  // active high pulse
+        end
+        
+        else begin
+            vsync <= (vpos >= V_SYNC_START && vpos <= V_SYNC_END);
+            if (hmaxxed)
+            if (vmaxxed) begin
+            vpos <= 0;
+            end else begin
+                vpos <= vpos + 1;
+            end
         end
     end
 
     // display_on is set when beam is in "safe" visible frame
     assign display_on = (hpos < H_DISPLAY) && (vpos < V_DISPLAY);
     assign frame_end = hblanked && vblanked;
-    assign input_enable = (hblanked && vpos < V_DISPLAY);
+    assign input_enable = 1; //(hblanked && vpos < V_DISPLAY);
 
 endmodule
 
 //================================================
 // Module: Picture Processing Unit 
-// Last Updated: 15/01/2025 @ 03:50:41
+// Author: Bowen Shi
+// Last Updated: 19:37 16/06/2025 
+
+// NOTE: Version in simulation has different port names (entity slots)
 
 
 /* 
@@ -1198,6 +1021,7 @@ module PictureProcessingUnit(
     input wire [17:0] dragon_4,
     input wire [17:0] dragon_5,
     input wire [17:0] dragon_6,
+    input wire [17:0] dragon_7,
 
     input wire [9:0] counter_V,
     input wire [9:0] counter_H,
@@ -1378,6 +1202,9 @@ module PictureProcessingUnit(
                 4'd13: begin
                     general_Entity <= dragon_6;
                 end
+                4'd14: begin
+                    general_Entity <= dragon_7;
+                end
 
                 default: begin
                     general_Entity <= 18'b111111000000000000;
@@ -1478,6 +1305,241 @@ module PictureProcessingUnit(
 endmodule
 
 
+//================================================
+module AudioProcessingUnit (
+    input wire clk,
+    input wire reset,
+    input wire SheepDragonCollision,
+    input wire SwordDragonCollision,
+    input wire PlayerDragonCollision,
+    input wire frame_end,
+    input wire [9:0] x,
+    input wire [9:0] y,
+    output wire sound
+);
+
+//-------------------------------------------//
+// Global frame counter (for melody timing)
+//-------------------------------------------//
+reg [11:0] frame_counter;
+always @(posedge clk) begin
+    if (reset)
+        frame_counter <= 0;
+    else if (x == 0 && y == 0)
+        frame_counter <= frame_counter + 1;
+end
+
+//-------------------------------------------//
+// SFX 1: Dragon Eating Sheep (low rumble)
+//-------------------------------------------//
+reg dragon_active, dragon_cooldown;
+reg [15:0] dragon_counter;
+reg dragon_square;
+reg [30:0] dragon_duration, dragon_cooldown_timer;
+
+always @(posedge clk) begin
+    if (reset) begin
+        dragon_active <= 0;
+        dragon_cooldown <= 0;
+        dragon_counter <= 0;
+        dragon_square <= 0;
+        dragon_duration <= 0;
+        dragon_cooldown_timer <= 0;
+    end else begin
+        if (SheepDragonCollision && !dragon_active && !dragon_cooldown) begin
+            dragon_active <= 1;
+            dragon_duration <= 3000;
+        end
+
+        if (dragon_active) begin
+            if (dragon_counter >= 600) begin
+                dragon_counter <= 0;
+                dragon_square <= ~dragon_square;
+            end else
+                dragon_counter <= dragon_counter + 1;
+
+            if (dragon_duration == 0) begin
+                dragon_active <= 0;
+                dragon_cooldown <= 1;
+                dragon_cooldown_timer <= 3000000;
+            end else
+                dragon_duration <= dragon_duration - 1;
+        end
+
+        if (dragon_cooldown) begin
+            if (dragon_cooldown_timer == 0)
+                dragon_cooldown <= 0;
+            else
+                dragon_cooldown_timer <= dragon_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] dragon_out = (dragon_square & dragon_active) ? 4'd8 : 4'd0;
+
+//-------------------------------------------//
+// SFX 2: Knight Hitting Dragon (noise burst)
+//-------------------------------------------//
+reg knight_hit_active, knight_hit_cooldown;
+reg [11:0] knight_hit_duration, knight_hit_cooldown_timer;
+reg [12:0] lfsr;
+wire lfsr_feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0];
+
+always @(posedge clk) begin
+    if (reset) begin
+        knight_hit_active <= 0;
+        knight_hit_cooldown <= 0;
+        knight_hit_duration <= 0;
+        knight_hit_cooldown_timer <= 0;
+        lfsr <= 13'b1;
+    end else begin
+        lfsr <= {lfsr[11:0], lfsr_feedback};
+
+        if (SwordDragonCollision && !knight_hit_active && !knight_hit_cooldown) begin
+            knight_hit_active <= 1;
+            knight_hit_duration <= 1800;
+        end
+
+        if (knight_hit_active) begin
+            if (knight_hit_duration == 0) begin
+                knight_hit_active <= 0;
+                knight_hit_cooldown <= 1;
+                knight_hit_cooldown_timer <= 1800;
+            end else
+                knight_hit_duration <= knight_hit_duration - 1;
+        end
+
+        if (knight_hit_cooldown) begin
+            if (knight_hit_cooldown_timer == 0)
+                knight_hit_cooldown <= 0;
+            else
+                knight_hit_cooldown_timer <= knight_hit_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] knight_hit_out = (lfsr[0] & knight_hit_active) ? 4'd10 : 4'd0;
+
+//-------------------------------------------//
+// SFX 3: Knight Taking Damage (high beep)
+//-------------------------------------------//
+reg knight_hurt_active, knight_hurt_cooldown;
+reg [15:0] knight_hurt_counter;
+reg knight_hurt_square;
+reg [15:0] knight_hurt_duration, knight_hurt_cooldown_timer;
+
+always @(posedge clk) begin
+    if (reset) begin
+        knight_hurt_active <= 0;
+        knight_hurt_cooldown <= 0;
+        knight_hurt_counter <= 0;
+        knight_hurt_square <= 0;
+        knight_hurt_duration <= 0;
+        knight_hurt_cooldown_timer <= 0;
+    end else begin
+        if (PlayerDragonCollision && !knight_hurt_active && !knight_hurt_cooldown) begin
+            knight_hurt_active <= 1;
+            knight_hurt_duration <= 1500;
+        end
+
+        if (knight_hurt_active) begin
+            if (knight_hurt_counter >= 200) begin
+                knight_hurt_counter <= 0;
+                knight_hurt_square <= ~knight_hurt_square;
+            end else
+                knight_hurt_counter <= knight_hurt_counter + 1;
+
+            if (knight_hurt_duration == 0) begin
+                knight_hurt_active <= 0;
+                knight_hurt_cooldown <= 1;
+                knight_hurt_cooldown_timer <= 1500;
+            end else
+                knight_hurt_duration <= knight_hurt_duration - 1;
+        end
+
+        if (knight_hurt_cooldown) begin
+            if (knight_hurt_cooldown_timer == 0)
+                knight_hurt_cooldown <= 0;
+            else
+                knight_hurt_cooldown_timer <= knight_hurt_cooldown_timer - 1;
+        end
+    end
+end
+
+wire [3:0] knight_hurt_out = (knight_hurt_square & knight_hurt_active) ? 4'd12 : 4'd0;
+
+// //-------------------------------------------//
+// // SFX 4: Game Win/Loss (melody)
+// //-------------------------------------------//
+// reg game_active, game_cooldown;
+// reg [3:0] melody_step;
+// reg [15:0] game_counter, tone_period;
+// reg game_square;
+// reg [15:0] game_cooldown_timer;
+
+// always @(posedge clk) begin
+//     if (reset) begin
+//         game_active <= 0;
+//         game_cooldown <= 0;
+//         melody_step <= 0;
+//         game_counter <= 0;
+//         tone_period <= 0;
+//         game_square <= 0;
+//         game_cooldown_timer <= 0;
+//     end else begin
+//         if (frame_end && !game_active && !game_cooldown && (melody_step == 0)) begin
+//             game_active <= 1;
+//             melody_step <= 0;
+//         end
+
+//         if (game_active) begin
+//             if (game_counter >= tone_period) begin
+//                 game_counter <= 0;
+//                 game_square <= ~game_square;
+//             end else
+//                 game_counter <= game_counter + 1;
+
+//             if (frame_end) begin
+//                 melody_step <= melody_step + 1;
+//                 case (melody_step)
+//                     0: tone_period <= 600;
+//                     1: tone_period <= 400;
+//                     2: tone_period <= 500;
+//                     3: tone_period <= 700;
+//                     4: begin
+//                         tone_period <= 0;
+//                         game_active <= 0;
+//                         game_cooldown <= 1;
+//                         game_cooldown_timer <= 3000;
+//                     end
+//                 endcase
+//             end
+//         end
+
+//         if (game_cooldown) begin
+//             if (game_cooldown_timer == 0)
+//                 game_cooldown <= 0;
+//             else
+//                 game_cooldown_timer <= game_cooldown_timer - 1;
+//         end
+//     end
+// end
+
+// wire [3:0] game_out = (game_square & game_active) ? 4'd14 : 4'd0;
+
+//-------------------------------------------//
+// PWM Mixer
+//-------------------------------------------//
+wire [5:0] mix = dragon_out + knight_hit_out + knight_hurt_out ;
+
+reg [5:0] pwm_counter;
+always @(posedge clk) begin
+    pwm_counter <= pwm_counter + 1;
+end
+
+assign sound = (pwm_counter < mix);
+
+endmodule
 //================================================
 
 // Module: SpriteROM 
@@ -1699,238 +1761,3 @@ module SpriteROM (
         end
 
     endmodule
-
-module APU (
-    input wire clk,
-    input wire reset,
-    input wire SheepDragonCollision,
-    input wire SwordDragonCollision,
-    input wire PlayerDragonCollision,
-    input wire frame_end,
-    input wire [9:0] x,
-    input wire [9:0] y,
-    output wire sound
-);
-
-//-------------------------------------------//
-// Global frame counter (for melody timing)
-//-------------------------------------------//
-reg [11:0] frame_counter;
-always @(posedge clk) begin
-    if (reset)
-        frame_counter <= 0;
-    else if (x == 0 && y == 0)
-        frame_counter <= frame_counter + 1;
-end
-
-//-------------------------------------------//
-// SFX 1: Dragon Eating Sheep (low rumble)
-//-------------------------------------------//
-reg dragon_active, dragon_cooldown;
-reg [15:0] dragon_counter;
-reg dragon_square;
-reg [30:0] dragon_duration, dragon_cooldown_timer;
-
-always @(posedge clk) begin
-    if (reset) begin
-        dragon_active <= 0;
-        dragon_cooldown <= 0;
-        dragon_counter <= 0;
-        dragon_square <= 0;
-        dragon_duration <= 0;
-        dragon_cooldown_timer <= 0;
-    end else begin
-        if (SheepDragonCollision && !dragon_active && !dragon_cooldown) begin
-            dragon_active <= 1;
-            dragon_duration <= 3000;
-        end
-
-        if (dragon_active) begin
-            if (dragon_counter >= 600) begin
-                dragon_counter <= 0;
-                dragon_square <= ~dragon_square;
-            end else
-                dragon_counter <= dragon_counter + 1;
-
-            if (dragon_duration == 0) begin
-                dragon_active <= 0;
-                dragon_cooldown <= 1;
-                dragon_cooldown_timer <= 3000000;
-            end else
-                dragon_duration <= dragon_duration - 1;
-        end
-
-        if (dragon_cooldown) begin
-            if (dragon_cooldown_timer == 0)
-                dragon_cooldown <= 0;
-            else
-                dragon_cooldown_timer <= dragon_cooldown_timer - 1;
-        end
-    end
-end
-
-wire [3:0] dragon_out = (dragon_square & dragon_active) ? 4'd8 : 4'd0;
-
-//-------------------------------------------//
-// SFX 2: Knight Hitting Dragon (noise burst)
-//-------------------------------------------//
-reg knight_hit_active, knight_hit_cooldown;
-reg [11:0] knight_hit_duration, knight_hit_cooldown_timer;
-reg [12:0] lfsr;
-wire lfsr_feedback = lfsr[12] ^ lfsr[8] ^ lfsr[2] ^ lfsr[0];
-
-always @(posedge clk) begin
-    if (reset) begin
-        knight_hit_active <= 0;
-        knight_hit_cooldown <= 0;
-        knight_hit_duration <= 0;
-        knight_hit_cooldown_timer <= 0;
-        lfsr <= 13'b1;
-    end else begin
-        lfsr <= {lfsr[11:0], lfsr_feedback};
-
-        if (SwordDragonCollision && !knight_hit_active && !knight_hit_cooldown) begin
-            knight_hit_active <= 1;
-            knight_hit_duration <= 1800;
-        end
-
-        if (knight_hit_active) begin
-            if (knight_hit_duration == 0) begin
-                knight_hit_active <= 0;
-                knight_hit_cooldown <= 1;
-                knight_hit_cooldown_timer <= 1800;
-            end else
-                knight_hit_duration <= knight_hit_duration - 1;
-        end
-
-        if (knight_hit_cooldown) begin
-            if (knight_hit_cooldown_timer == 0)
-                knight_hit_cooldown <= 0;
-            else
-                knight_hit_cooldown_timer <= knight_hit_cooldown_timer - 1;
-        end
-    end
-end
-
-wire [3:0] knight_hit_out = (lfsr[0] & knight_hit_active) ? 4'd10 : 4'd0;
-
-//-------------------------------------------//
-// SFX 3: Knight Taking Damage (high beep)
-//-------------------------------------------//
-reg knight_hurt_active, knight_hurt_cooldown;
-reg [15:0] knight_hurt_counter;
-reg knight_hurt_square;
-reg [15:0] knight_hurt_duration, knight_hurt_cooldown_timer;
-
-always @(posedge clk) begin
-    if (reset) begin
-        knight_hurt_active <= 0;
-        knight_hurt_cooldown <= 0;
-        knight_hurt_counter <= 0;
-        knight_hurt_square <= 0;
-        knight_hurt_duration <= 0;
-        knight_hurt_cooldown_timer <= 0;
-    end else begin
-        if (PlayerDragonCollision && !knight_hurt_active && !knight_hurt_cooldown) begin
-            knight_hurt_active <= 1;
-            knight_hurt_duration <= 1500;
-        end
-
-        if (knight_hurt_active) begin
-            if (knight_hurt_counter >= 200) begin
-                knight_hurt_counter <= 0;
-                knight_hurt_square <= ~knight_hurt_square;
-            end else
-                knight_hurt_counter <= knight_hurt_counter + 1;
-
-            if (knight_hurt_duration == 0) begin
-                knight_hurt_active <= 0;
-                knight_hurt_cooldown <= 1;
-                knight_hurt_cooldown_timer <= 1500;
-            end else
-                knight_hurt_duration <= knight_hurt_duration - 1;
-        end
-
-        if (knight_hurt_cooldown) begin
-            if (knight_hurt_cooldown_timer == 0)
-                knight_hurt_cooldown <= 0;
-            else
-                knight_hurt_cooldown_timer <= knight_hurt_cooldown_timer - 1;
-        end
-    end
-end
-
-wire [3:0] knight_hurt_out = (knight_hurt_square & knight_hurt_active) ? 4'd12 : 4'd0;
-
-//-------------------------------------------//
-// SFX 4: Game Win/Loss (melody)
-//-------------------------------------------//
-reg game_active, game_cooldown;
-reg [3:0] melody_step;
-reg [15:0] game_counter, tone_period;
-reg game_square;
-reg [15:0] game_cooldown_timer;
-
-always @(posedge clk) begin
-    if (reset) begin
-        game_active <= 0;
-        game_cooldown <= 0;
-        melody_step <= 0;
-        game_counter <= 0;
-        tone_period <= 0;
-        game_square <= 0;
-        game_cooldown_timer <= 0;
-    end else begin
-        if (frame_end && !game_active && !game_cooldown && (melody_step == 0)) begin
-            game_active <= 1;
-            melody_step <= 0;
-        end
-
-        if (game_active) begin
-            if (game_counter >= tone_period) begin
-                game_counter <= 0;
-                game_square <= ~game_square;
-            end else
-                game_counter <= game_counter + 1;
-
-            if (frame_end) begin
-                melody_step <= melody_step + 1;
-                case (melody_step)
-                    0: tone_period <= 600;
-                    1: tone_period <= 400;
-                    2: tone_period <= 500;
-                    3: tone_period <= 700;
-                    4: begin
-                        tone_period <= 0;
-                        game_active <= 0;
-                        game_cooldown <= 1;
-                        game_cooldown_timer <= 3000;
-                    end
-                endcase
-            end
-        end
-
-        if (game_cooldown) begin
-            if (game_cooldown_timer == 0)
-                game_cooldown <= 0;
-            else
-                game_cooldown_timer <= game_cooldown_timer - 1;
-        end
-    end
-end
-
-wire [3:0] game_out = (game_square & game_active) ? 4'd14 : 4'd0;
-
-//-------------------------------------------//
-// PWM Mixer
-//-------------------------------------------//
-wire [5:0] mix = dragon_out + knight_hit_out + knight_hurt_out + game_out;
-
-reg [5:0] pwm_counter;
-always @(posedge clk) begin
-    pwm_counter <= pwm_counter + 1;
-end
-
-assign sound = (pwm_counter < mix);
-
-endmodule
