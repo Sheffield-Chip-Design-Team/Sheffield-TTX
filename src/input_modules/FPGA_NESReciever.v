@@ -579,7 +579,23 @@ module gamepad_pmod_decoder (
   // When the controller is not connected, the data register will be all 1's
   wire reg_empty = (data_reg == 12'hfff);
   assign is_present = reg_empty ? 0 : 1'b1;
-  assign {b, y, select, start, up, down, left, right, a, x, l, r} = reg_empty ? 0 : data_reg;
+
+  // Fix issue with PMOD: irregular/unreliable data for every other latch cycle
+  wire [11:0] button_data = reg_empty ? 12'b0 : data_reg;
+  
+  // Count number of pressed buttons (count 1's in button_data)
+  wire [3:0] button_count = button_data[0] + button_data[1] + button_data[2] + 
+                           button_data[3] + button_data[4] + button_data[5] + 
+                           button_data[6] + button_data[7] + button_data[8] + 
+                           button_data[9] + button_data[10] + button_data[11];
+  
+  // If more than X buttons pressed, output all unpressed (adjust threshold as needed)
+  wire too_many_buttons = (button_count > 4'd2);  // More than 2 buttons = suspicious
+  
+  // Output all zeros if too many buttons, otherwise use actual data
+  wire [11:0] filtered_data = too_many_buttons ? 12'b0 : button_data;
+  
+  assign {b, y, select, start, up, down, left, right, a, x, l, r} = filtered_data;
 
 endmodule
 
