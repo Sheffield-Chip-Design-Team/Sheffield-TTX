@@ -46,7 +46,8 @@ module tt_um_Enjimneering_top (
     // Bypass the reciver module (for simulation)
     InputCollector ic(  
         .clk(clk),
-        .reset(frame_end),
+        .reset(~rst_n),
+        .trigger(frame_end),
         .up(ui_in[0]),
         .down(ui_in[1]),
         .left(ui_in[2]),
