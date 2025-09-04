@@ -26,16 +26,27 @@ module InputCollector (
     output reg [9:0] control_state  
 );
     // control state is now  10 bits wide to include whether all buttons have been released
-    reg [4:0] previous_state  = 5'b0;
-    reg [4:0] current_state   = 5'b0;
-    reg [4:0] pressed_buttons = 5'b0 ;
-    reg [4:0] released_buttons = 5'b0 ;
+    reg [4:0] previous_state   = 5'b0;
+    reg [4:0] current_state    = 5'b0;
+    reg [4:0] pressed_buttons  = 5'b0;
+    reg [4:0] released_buttons = 5'b0;
+    reg       prev_trigger     = 1'b0;
+    reg       trigger_reset    = 1'b0;
+   
+   
 
     always @(posedge clk) begin
+        prev_trigger <= trigger;
         previous_state <= current_state;
-        current_state <= {attack, right, left , down , up};
+        current_state  <= {attack, right, left , down , up};
     end
 
+    // edge detector for triggering
+    always @(posedge clk) begin
+        trigger_reset <= (~prev_trigger && trigger);
+    end
+   
+    // posedge detector for pressed buttons
     always @(posedge clk) begin
         pressed_buttons[0] <= (current_state[0] == 1 & previous_state[0] == 0) ? 1:0;
         pressed_buttons[1] <= (current_state[1] == 1 & previous_state[1] == 0) ? 1:0;
@@ -44,6 +55,7 @@ module InputCollector (
         pressed_buttons[4] <= (current_state[4] == 1 & previous_state[4] == 0) ? 1:0;
     end
 
+    // negedge detector for released buttons
     always @(posedge clk) begin // added check for when buttons are released
         released_buttons[0] <= (current_state[0] == 0 & previous_state[0] == 1) ? 1:0;
         released_buttons[1] <= (current_state[1] == 0 & previous_state[1] == 1) ? 1:0;
@@ -53,17 +65,15 @@ module InputCollector (
     end
 
     always @(posedge clk) begin
-        if (!reset) begin
-            if (trigger) begin
-                control_state <= control_state | {pressed_buttons, released_buttons};
-            end
+        if (~(reset|trigger_reset)) begin
+            control_state <= control_state | {pressed_buttons, released_buttons};
         end
-        else begin // reset behaviour
-            control_state <= 0;
-            pressed_buttons <= 0;
+        else begin  // reset/trigger behaviour
+            pressed_buttons  <= 0;
             released_buttons <= 0;
-            current_state <= 0;
-            previous_state <= 0;
+            current_state    <= 0;
+            previous_state   <= 0;
+            control_state    <= 0;
         end
     end
     
