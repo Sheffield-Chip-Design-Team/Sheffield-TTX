@@ -306,16 +306,16 @@ module tt_um_Enjimneering_top (
     // Audio signals
     wire sound;
 
-    AudioProcessingUnit apu( 
-      .clk(clk),
-      .reset(~rst_n),
-      .PlayerDragonCollision(PlayerDragonCollision),
-      .SheepDragonCollision(SheepDragonCollision),
-      .SwordDragonCollision(SwordDragonCollision),      
-      .x(pix_x),
-      .y(pix_y),
-      .sound(sound)
-    );
+    // AudioProcessingUnit apu( 
+    //   .clk(clk),
+    //   .reset(~rst_n),
+    //   .PlayerDragonCollision(PlayerDragonCollision),
+    //   .SheepDragonCollision(SheepDragonCollision),
+    //   .SwordDragonCollision(SwordDragonCollision),      
+    //   .x(pix_x),
+    //   .y(pix_y),
+    //   .sound(sound)
+    // );
     
     // System IO Connections
     assign NES_Data = ui_in[0];
