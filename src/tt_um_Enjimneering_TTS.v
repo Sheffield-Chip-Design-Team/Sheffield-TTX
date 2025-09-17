@@ -5,9 +5,10 @@
  * Authors: James Ashie Kotey, Bowen Shi, Anubhav Avinash, Kwashie Andoh, 
  * Abdulatif Babli, K Arjunav, Cameron Brizland, Rupert Bowen
  * Last Updated: 01/12/2024 @ 21:26:37
-*/
+ */
 
-// === SIMULATION BUILD DEPENDENCIES === 
+
+// === SIMULATION BUILD DEPENDENCIES ===
 //   `include "ControlInterface.v"
 //   `include "CollisionDetector.v"
 //   `include "Heart.v"
@@ -18,6 +19,8 @@
 //   `include "Sync.v"
 //   `include "PPU.v"
 //   `include "APU.v"
+
+
 // === END ===
 
 // TT Pinout (standard for TT projects - can't change this)
@@ -320,7 +323,7 @@ module tt_um_Enjimneering_top (
     // System IO Connections
     assign NES_Data = ui_in[0];
     assign uio_oe   = 8'b1000_0011;
-    assign uio_out  = {sound, 5'b00000, NES_Latch, NES_Clk};
+    assign uio_out  = {1'b0, 5'b00000, NES_Latch, NES_Clk};
     assign uo_out   = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
     
     // housekeeping to prevent errors/ warnings in synthesis.
