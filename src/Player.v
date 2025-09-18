@@ -1,7 +1,7 @@
 // Module: Player Logic
 
 /*
-   Last Updated: 27/12/2024 @ 00:15:32
+   Last Updated: 04:27 18/09/2025 
    Authors: Anubhav Avinaash, James Ashie Kotey, Bowen Shi.
    Description:    
         Player Logic FSM - movement and attack control. 
@@ -31,6 +31,11 @@ module PlayerLogic (
   localparam MOVE_STATE = 2'b10;  // Wait for input and stay idle
   localparam ATTACK_DURATION = 6'b000_100;
 
+  wire [4:0] pressed_buttons;
+  wire [4:0] released_buttons;
+  assign pressed_buttons  = input_data[9:5];  // up, down, left, right, attack
+  assign released_buttons = input_data[4:0];  
+
   reg [5:0] player_anim_counter;
   reg [5:0] sword_duration;  // how long the sword stays visible - (SET BY ATTACK DURATION)
 
@@ -47,25 +52,29 @@ module PlayerLogic (
 
   always @(posedge clk) begin // Movement Input FSM
     if (~reset) begin
-        if (input_data[9:5] != 5'b00000) begin
-            input_buffer <= input_data[9:5];
-        end else if (input_data[4:0] != 5'b00000) begin
-        // reset input buffer when buttons are released
-        input_buffer <= 0;
+
+      if (pressed_buttons != 5'b00000) begin
+        input_buffer <= input_data[9:5];
       end
+      
+      else if (released_buttons != 5'b00000) begin
+          // reset input buffer when buttons are released
+          input_buffer <= 0;
+      end
+
       if (trigger) begin
         // switch between states on trigger
         current_state <= next_state;  // Update state
       end
+
     end else begin
-      input_buffer  <= 0;
-      current_state <= 0;
-    end
+        input_buffer  <= 0;
+        current_state <= 0;
+      end
   end
 
 
   always @(posedge clk) begin  // animation FSM
-
     if (~reset) begin
 
       if (trigger) begin
@@ -98,7 +107,7 @@ module PlayerLogic (
     if (~reset) begin
 
       // Reset the action_complete flag when buttons are released
-      if (input_data[4:0] != 5'b00000) begin
+      if (pressed_buttons != 5'b00000) begin
         action_complete <= 0;
         direction_stored <= 0;
       end
@@ -122,7 +131,6 @@ module PlayerLogic (
                 next_state <= MOVE_STATE;
               end
             end
-
 
             default: begin
               next_state <= IDLE_STATE;  // Default case, stay in IDLE state
@@ -163,6 +171,7 @@ module PlayerLogic (
               player_direction <= 2'b01;
               action_complete <= 1;
             end
+
           end else begin
             next_state <= IDLE_STATE;  // Return to IDLE after moving
           end
@@ -197,6 +206,7 @@ module PlayerLogic (
                 direction_stored <= 1;
               end
             end
+            
             // if not, use the last direction
             else begin
               last_direction <= player_direction;
