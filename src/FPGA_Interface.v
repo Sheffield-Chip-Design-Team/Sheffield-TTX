@@ -6,9 +6,13 @@ module TTS_FPGA_top (
     input  wire          RST_N,          // PIN J15 
     // Controller Signals
     input  wire          NES_DATA,       // PIN H1 
+    input  wire          SNES_PMOD_Data,
+    input  wire          SNES_PMOD_Latch,
+    input  wire          SNES_PMOD_Clk,
+    
     output wire          NES_LATCH,      // PIN G1
     output wire          NES_CLK,        // PIN G3
-    output wire  [4:0]   CONTROLLER_LED, // LEDs
+    output wire [4:0] CONTROLLER_LED ,
     // VGA signals
     output wire  [3:0]   R,              // PINS: A4 C5 B4 A3
     output wire  [3:0]   G,              // PINS: A6 B6 A5 C6
@@ -20,13 +24,17 @@ module TTS_FPGA_top (
 );
 
     wire R_LO, R_HI, G_LO, G_HI, B_LO, B_HI; // RGB Output Signals (VGA)
+    
+    wire [7:0] uio_out_bus;
+
+    assign uio_out_bus = {5'b00000, NES_LATCH, NES_CLK, PWM};
    
     /* Make sure the name is consistent with the current iteration of the chip! */
     tt_um_tinytapestation tts ( // Make sure the i/o pinout is accurate according to the spec!
-        .ui_in    ({7'b000_0000, NES_DATA}),    
+        .ui_in    ({4'b0000, SNES_PMOD_Latch, SNES_PMOD_Clk, SNES_PMOD_Data, NES_DATA}),    
         .uo_out   ({H_SYNC, B_LO, G_LO, R_LO, V_SYNC, B_HI, G_HI, R_HI}), 
         .uio_in   ({8'b0000_0000}),   
-        .uio_out  ({5'b00_0000, NES_LATCH, NES_CLK, PWM}),    
+        .uio_out  (uio_out_bus),    
         .uio_oe   ({8'b0000_0111}),                      
         .ena      (1),                                   
         .clk      (CLK),      
@@ -40,6 +48,8 @@ module TTS_FPGA_top (
     assign B[1:0] =  {B_LO, B_LO};
     assign B[3:2] =  {B_HI, B_HI};
     
-    assign CONTROLLER_LED [4:0] =  0; // {tts.UP, tts.DOWN, tts.LEFT, tts.RIGHT, tts.A_BUT};
+
+    assign CONTROLLER_LED = {tts.A_out, tts.up_out, tts.down_out, tts.left_out, tts.right_out};
+    
    
 endmodule
