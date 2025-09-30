@@ -32,7 +32,7 @@ module tt_um_tinytapestation (
     Clk_Div clk_div // defined in Vivado - ignore error.
     (
      .clk_in1(clk),      // input clk_in1
-     .resetn(rst_n),
+     .resetn(1'b1),
      .system_clk_25MHz(system_clk_25MHz)     // output pixel_clk_25MHz
     );
 
@@ -286,7 +286,7 @@ module tt_um_tinytapestation (
       .clk(clk),
       .reset(~rst_n),
       .trigger(~rst_n | SwordDragonCollision | SheepDragonCollision | PlayerDragonCollision),
-      .seed({pix_y[0],playerLives,VisibleSegments[5],pixel_value,pix_x[7:5]}), // Seed input for initializing randomness
+      .seed(player_pos^dragon_1), // Seed input for initializing randomness
       .ready(),
       .rdm_num(sheep_pos)
      );
@@ -829,7 +829,7 @@ module PlayerLogic (
         ATTACK_STATE: begin
         
         if (trigger) begin 
-              if(~action_complete && pressed_buttons[4] !=0) begin
+              if((~action_complete && pressed_buttons[4]) !=0) begin
              
                     // Check if the sword direction is specified by the player
                     if(input_buffer[3:0] != 0) begin
@@ -962,12 +962,12 @@ module DragonTarget(
         
                 0: begin //chase the player
                   target_pos_reg <= player_pos;
-                  if (dragon_hurt | target_reached_player | target_reached_sheep)  NextDragonBehaviourState <= 0; 
+                  if (dragon_hurt | target_reached_player)  NextDragonBehaviourState <= 1; 
                 end
         
                 1: begin // chase the sheep
                   target_pos_reg <= sheep_pos;
-                  if ((dragon_hurt | target_reached_sheep | target_reached_player)) NextDragonBehaviourState <= 0;
+                  if (dragon_hurt | target_reached_sheep) NextDragonBehaviourState <= 0;
                 end
         
 //                2: begin // retreat to a corner (use two of the bits of the rng?
@@ -1117,7 +1117,6 @@ module DragonBody(
 
 
     always @(posedge clk)begin
-        
         if (~reset) begin
         
             pre_vsync <= vsync;
@@ -1134,7 +1133,8 @@ module DragonBody(
                     Dragon_7 <= Dragon_6;
                 end
 
-        end end else begin
+            end 
+        end else begin
             Dragon_1 <= {2'b00,8'hFB};
             Dragon_2 <= {2'b00,8'hFB};
             Dragon_3 <= {2'b00,8'hFB};
@@ -1149,7 +1149,6 @@ module DragonBody(
     wire colddown = interval > 32'h01000000;
 
     always @( posedge clk )begin
-        
         if(~reset) begin
             case(1'b1) 
                 heal_pause&(Dragon_1[7:0]!=8'hFB): begin
@@ -1173,7 +1172,7 @@ module rng ( // random nuumber generator based on linear feedback + seed
   input wire trigger,
   input wire [7:0] seed, // Seed input for initializing randomness
   output wire ready,
-  output wire [7:0] rdm_num
+  output reg [7:0] rdm_num
 );
 
     localparam [7:0] default_value = 8'b1001_1011;
@@ -1184,6 +1183,21 @@ module rng ( // random nuumber generator based on linear feedback + seed
     wire tri_pulse = trigger_reg & !trigger;
     reg tri_pulse_reg;
     reg [7:0] seed_reg;
+
+    // --- combinational mix (no drivers to seed_reg) ---
+    wire [7:0] x1   = seed_reg ^ (seed_reg << 3);     // xorshift left
+    wire [7:0] x2   = x1 + seed;                      // add seed for diffusion
+    wire [7:0] x3   = x2 ^ (x2 >> 2);                 // xorshift right
+    wire [7:0] x4   = {x3[0], x3[7:1]};               // rotate right by 1
+    wire [7:0] next = x4 * 8'hB5;                     // multiply by odd constant
+
+    // --- single driver for seed_reg ---
+    always @(posedge clk) begin
+        if (reset)
+            seed_reg <= (seed == 8'h00) ? 8'h01 : seed;  // avoid all-zero lock
+        else
+            seed_reg <= next;                            // single non-blocking update
+    end
 
     // sequential lfsr-based random number generator
     always @(posedge clk) begin
@@ -1201,24 +1215,23 @@ module rng ( // random nuumber generator based on linear feedback + seed
         trigger_reg <= trigger;
         tri_pulse_reg <= tri_pulse;
 
-        seed_reg <= seed+seed_reg;
-
         if (tri_pulse) begin 
           ready_reg <= 0;
-          rand_buf1[6:0] <= seed_reg[7:1];  // Shift all bits from the seed
-          rand_buf1[7]   <= rand_buf1[6] ^ rand_buf1[5] ^ rand_buf1[4]; // Feedback XOR for randomness
+          rand_buf1[3:0] <= (next[3:0] > 4'b1100)? (next[3:0]-4'b1100) : next[3:0];  // Shift all bits from the seed
+          rand_buf1[7:4] <= next[7:4]; // Feedback XOR for randomness
         end
           
         if (tri_pulse_reg) begin
             ready_reg  <= 1;
-            rand_buf2  <= (rand_buf1 % 8'b1111_1100);
         end
         
       end 
 
     end
 
-    assign rdm_num =(rand_buf2[3:0]!=4'h0 )? rand_buf2:{rand_buf2[7:4],rand_buf1[7:4]};
+    always @(posedge clk) begin
+        rdm_num <= rand_buf1;
+    end
     assign ready = ready_reg;
 
 endmodule

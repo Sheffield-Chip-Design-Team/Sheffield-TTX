@@ -14,20 +14,20 @@
 module NESTest_Top (
 
     // system
-    input wire system_clk_100MHz, // E3 - CLK pin
-    input wire reset,             // Switch
+    input wire system_clk_25MHz, // System clock 
+    input wire rst_n,             // active low reset
 
     // controller interface [GPIO]
-    input wire NES_Data,
-    output wire NES_Latch,
-    output wire NES_Clk,
+    input wire NES_Data, // NES controller data -> ui_in[1]
+    output wire NES_Latch, // uo_out[1] -> NES controller latch
+    output wire NES_Clk, // uo_out[2] -> NES controller clk
 
     // SNES PMOD interface [3 pins]
-    input wire SNES_PMOD_Data,    // PMOD IO7  
-    input wire SNES_PMOD_Clk,     // PMOD IO6
-    input wire SNES_PMOD_Latch,   // PMOD IO5
+    input wire SNES_PMOD_Data,    // PMOD IO7 ->  ui_in[2] 
+    input wire SNES_PMOD_Clk,     // PMOD IO6 ->  ui_in[3]
+    input wire SNES_PMOD_Latch,   // PMOD IO5 ->  ui_in[4]
 
-    // button states [LEDs]
+    // button states: to data_out[7:0] on address 0x0
     output wire A_out,
     output wire B_out,
     output wire select_out,
@@ -37,34 +37,24 @@ module NESTest_Top (
     output wire left_out,
     output wire right_out,
     
-    // Additional SNES buttons [LEDs]
+    // Additional SNES buttons: to data_out[3:0] on address 0x1
     output wire X_out,
     output wire Y_out,
     output wire L_out,
     output wire R_out,
     
-    // Status indicator [optional LED]
+    // Status indicator: to data_out[7] on address 0x1
     output wire controller_status  // 1 = SNES active, 0 = NES active
 
 );
-
-    wire system_clk_50MHz;
-
-    // 100MHz -> 50MHz Clock Divider
-    clk_div clk_div_100to50
-    (
-        .clk_in(system_clk_100MHz),
-        .reset(reset),
-        .clk_50MHz(system_clk_50MHz)
-    );
 
     // NES Controller signals
     wire nes_A, nes_B, nes_select, nes_start;
     wire nes_up, nes_down, nes_left, nes_right;
 
     NES_Reciever nesRec (
-        .clk(system_clk_50MHz),
-        .reset(reset),
+        .clk(system_clk_25MHz),
+        .reset(~rst_n), // have to invert this since it works on active high
         .data(NES_Data),
         .latch(NES_Latch),
         .nes_clk(NES_Clk),
@@ -86,8 +76,8 @@ module NESTest_Top (
 
     // SNES PMOD Interface (using the actual module from the repo)
     gamepad_pmod_single snes_controller (
-        .rst_n(~reset),                 // Active low reset
-        .clk(system_clk_50MHz),         // 50MHz clock
+        .rst_n(rst_n),                 // Active low reset
+        .clk(system_clk_25MHz),         // 64MHz clock
         .pmod_data(SNES_PMOD_Data),     // Raw PMOD signals
         .pmod_clk(SNES_PMOD_Clk),
         .pmod_latch(SNES_PMOD_Latch),
@@ -146,6 +136,12 @@ module NES_Reciever (
     output wire left,
     output wire right  // output states of nes controller buttons
 );
+
+    // Timing constants (pre-computed for 25 MHz). Readjust based on clk freq
+    // 25 MHz * 12 us = 300 cycles
+    // 25 MHz * 6 us  = 150 cycles
+    localparam [10:0] LATCH_CYCLES = 11'd300; 
+    localparam [10:0] HALF_CLK_CYC = 11'd150;
 
     // FSM symbolic states
     localparam [3:0] latch_en = 4'h0;  // assert latch for 12 us
@@ -222,11 +218,11 @@ module NES_Reciever (
                 nes_clk_next <= 0;  // nes_clk state
 
                 // count 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                     count_next <= count_reg + 1;
 
                 // once 12 us passed
-                else if (count_reg == 300) begin
+                else if (count_reg == LATCH_CYCLES) begin
                     latch_next <= 0;  // deassert latch pin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_A_wait;  // go to read_A_wait state
@@ -241,11 +237,11 @@ module NES_Reciever (
                     A_next <= data;  // read A
                 end
 
-                if (count_reg < 150)  // count clk cycles for 6 us
+                if (count_reg < HALF_CLK_CYC)  // count clk cycles for 6 us
                 count_next <= count_reg + 1;
 
                 // once 6 us passed
-                else if (count_reg == 150) begin
+                else if (count_reg == HALF_CLK_CYC) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_B;  // go to read_B state
                 end
@@ -254,23 +250,23 @@ module NES_Reciever (
             read_B: begin
 
                 // count clk cycles for 12 us
-                if (count_reg < 300) begin
+                if (count_reg < LATCH_CYCLES) begin
                     count_next <= count_reg + 1;
                 end
 
                 // nes_clk state
-                if (count_reg <= 150)
+                if (count_reg <= HALF_CLK_CYC)
                     nes_clk_next<= 1;
 
-                else if (count_reg > 150)
+                else if (count_reg > HALF_CLK_CYC)
                     nes_clk_next <= 0;
 
                 // read B
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     B_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_select;  // go to read_select state
                 end
@@ -279,21 +275,21 @@ module NES_Reciever (
             read_select: begin
 
                 // count clk cycles for 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                     count_next <= count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 150)
+                if (count_reg <= HALF_CLK_CYC)
                     nes_clk_next <= 1;
-                else if (count_reg > 150)
+                else if (count_reg > HALF_CLK_CYC)
                     nes_clk_next <= 0;
 
                 // read select
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     select_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_start;  // go to read_start state
                 end
@@ -302,21 +298,21 @@ module NES_Reciever (
 
             read_start: begin
                 // count clk cycles for 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                 count_next <= count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 150)
+                if (count_reg <= HALF_CLK_CYC)
                     nes_clk_next <= 1;
-                else if (count_reg > 150)
+                else if (count_reg > HALF_CLK_CYC)
                     nes_clk_next <= 0;
 
                 // read start
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     start_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_up;  // go to read_up state
                 end
@@ -324,21 +320,21 @@ module NES_Reciever (
 
             read_up: begin
                 // count clk cycles for 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                     count_next <= count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 150)
+                if (count_reg <= HALF_CLK_CYC)
                     nes_clk_next <= 1;
-                else if (count_reg > 150)
+                else if (count_reg > HALF_CLK_CYC)
                     nes_clk_next <= 0;
 
                 // read up
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     up_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_down;  // go to read_down state
                 end
@@ -346,23 +342,23 @@ module NES_Reciever (
 
             read_down: begin
                 // count clk cycles for 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                     count_next <= count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 150) begin
+                if (count_reg <= HALF_CLK_CYC) begin
                     nes_clk_next <= 1;
-                end else if (count_reg > 150) begin
+                end else if (count_reg > HALF_CLK_CYC) begin
                     nes_clk_next <= 0;
                 end
 
                 // read down
-                if (count_reg == 150) begin
+                if (count_reg == HALF_CLK_CYC) begin
                     down_next <= data;
                 end
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_left;  // go to read_left state
                 end
@@ -370,22 +366,22 @@ module NES_Reciever (
 
             read_left: begin
                 // count clk cycles for 12 us
-                if (count_reg < 300)
+                if (count_reg < LATCH_CYCLES)
                     count_next <= count_reg + 1;
 
                 // nes_clk state
-                if (count_reg <= 150) begin
+                if (count_reg <= HALF_CLK_CYC) begin
                     nes_clk_next <= 1;
-                end else if (count_reg > 150) begin
+                end else if (count_reg > HALF_CLK_CYC) begin
                     nes_clk_next <= 0;
                 end
 
                 // read left
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     left_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= read_right;  // go to read_right state
                 end
@@ -394,23 +390,23 @@ module NES_Reciever (
 
             read_right: begin
                 // count clk cycles for 12 us
-                if (count_reg < 300) begin
+                if (count_reg < LATCH_CYCLES) begin
                     count_next <= count_reg + 1;
                 end
 
                 // nes_clk state
-                if (count_reg <= 150) begin
+                if (count_reg <= HALF_CLK_CYC) begin
                     nes_clk_next <= 1;
-                end else if (count_reg > 150) begin
+                end else if (count_reg > HALF_CLK_CYC) begin
                     nes_clk_next <= 0;
                 end
 
                 // read right
-                if (count_reg == 150)
+                if (count_reg == HALF_CLK_CYC)
                     right_next <= data;
 
                 // state over
-                if (count_reg == 300) begin
+                if (count_reg == LATCH_CYCLES) begin
                     count_next <= 0;  // reset latch_count
                     state_next <= latch_en;  // go to latch_en state
                 end
@@ -560,6 +556,8 @@ endmodule
  *   - `is_present`: Indicates whether a controller is connected (`1` = connected, `0` = not connected).
  */
 module gamepad_pmod_decoder (
+    input wire clk,
+    input wire rst_n,
     input wire [11:0] data_reg,
     output wire b,
     output wire y,
@@ -584,16 +582,30 @@ module gamepad_pmod_decoder (
   wire [11:0] button_data = reg_empty ? 12'b0 : data_reg;
   
   // Count number of pressed buttons (count 1's in button_data)
-  wire [3:0] button_count = button_data[0] + button_data[1] + button_data[2] + 
-                           button_data[3] + button_data[4] + button_data[5] + 
-                           button_data[6] + button_data[7] + button_data[8] + 
-                           button_data[9] + button_data[10] + button_data[11];
+  wire [3:0] button_count = {3'b0, button_data[0]} + {3'b0, button_data[1]} + {3'b0, button_data[2]} +
+                            {3'b0, button_data[3]} + {3'b0, button_data[4]} + {3'b0, button_data[5]} +
+                            {3'b0, button_data[6]} + {3'b0, button_data[7]} + {3'b0, button_data[8]} +
+                            {3'b0, button_data[9]} + {3'b0, button_data[10]} + {3'b0, button_data[11]};
   
   // If more than X buttons pressed, output all unpressed (adjust threshold as needed)
   wire too_many_buttons = (button_count > 4'd2);  // More than 2 buttons = suspicious
+    
+  // Store previous valid output
+  reg [11:0] prev_output;
   
-  // Output all zeros if too many buttons, otherwise use actual data
-  wire [11:0] filtered_data = too_many_buttons ? 12'b0 : button_data;
+  always @(posedge clk) begin
+    if (~rst_n) begin
+      prev_output <= 12'b0;
+    end else begin
+      // If data looks good, update previous output
+      if (!too_many_buttons) begin
+        prev_output <= button_data;
+      end
+    end
+  end
+  
+  // Use previous output if current data is suspicious, otherwise use current data
+  wire [11:0] filtered_data = too_many_buttons ? prev_output : button_data;
   
   assign {b, y, select, start, up, down, left, right, a, x, l, r} = filtered_data;
 
@@ -649,6 +661,8 @@ module gamepad_pmod_single (
   );
 
   gamepad_pmod_decoder decoder (
+      .clk(clk),
+      .rst_n(rst_n),
       .data_reg(gamepad_pmod_data),
       .b(b),
       .y(y),
@@ -664,5 +678,6 @@ module gamepad_pmod_single (
       .r(r),
       .is_present(is_present)
   );
+
 
 endmodule

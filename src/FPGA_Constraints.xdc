@@ -28,6 +28,10 @@ set_property -dict {PACKAGE_PIN G3  IOSTANDARD LVCMOS33} [get_ports NES_CLK]
 set_property -dict {PACKAGE_PIN H1  IOSTANDARD LVCMOS33} [get_ports NES_DATA]
 set_property -dict {PACKAGE_PIN G1  IOSTANDARD LVCMOS33} [get_ports NES_LATCH]
 
+set_property -dict {PACKAGE_PIN D17 IOSTANDARD LVCMOS33} [get_ports SNES_PMOD_Latch]
+set_property -dict {PACKAGE_PIN E17 IOSTANDARD LVCMOS33} [get_ports SNES_PMOD_Clk]
+set_property -dict {PACKAGE_PIN F18 IOSTANDARD LVCMOS33} [get_ports SNES_PMOD_Data]
+
 set_property -dict {PACKAGE_PIN T16 IOSTANDARD LVCMOS33} [get_ports {CONTROLLER_LED[0]}]
 set_property -dict {PACKAGE_PIN V15 IOSTANDARD LVCMOS33} [get_ports {CONTROLLER_LED[1]}]
 set_property -dict {PACKAGE_PIN V14 IOSTANDARD LVCMOS33} [get_ports {CONTROLLER_LED[2]}]
@@ -36,4 +40,4 @@ set_property -dict {PACKAGE_PIN V11 IOSTANDARD LVCMOS33} [get_ports {CONTROLLER_
 
 
 # Audio Output
-set_property -dict {PACKAGE_PIN A11 IOSTANDARD LVCMOS33} [get_ports {PWM}]
+set_property -dict {PACKAGE_PIN E6 IOSTANDARD LVCMOS33} [get_ports {PWM}]
