@@ -129,7 +129,7 @@ module tt_um_tinytapestation (
 
     always @(posedge system_clk_25MHz) begin
         if (A_out_negedge) current_time <= timer;
-        if (timer - current_time > 32'h0000000F) begin // change this constant to change the attack cd
+        if (timer - current_time > 32'h000000FF) begin // change this constant to change the attack cd
             attack_enable <= 1;
         end else begin
             attack_enable <= 0;
@@ -149,7 +149,8 @@ module tt_um_tinytapestation (
 
     // Global Timer
     reg [31:0] timer;
-    always @(posedge system_clk_25MHz) if (rst_n) timer <= timer+1; else timer <= 0;
+    initial timer =0;
+    always @(posedge system_clk_25MHz) timer <= timer+1;
 
     wire PlayerDragonCollision;
     wire SwordDragonCollision;
@@ -265,6 +266,7 @@ module tt_um_tinytapestation (
         .dragon_state(VisibleSegments),
         .dragon_hurt(SwordDragonCollision),
         .player_pos(player_pos), 
+        .rnd_timer(timer[0]),
         .sheep_pos(sheep_pos),
         .target_pos(target_pos)
     );
@@ -309,8 +311,8 @@ module tt_um_tinytapestation (
     rng randnum (   // random nuumber generator based on linear feedback + seed
       .clk(clk),
       .reset(~rst_n),
-      .trigger(~rst_n | SwordDragonCollision | SheepDragonCollision | PlayerDragonCollision),
-      .seed(player_pos^dragon_1), // Seed input for initializing randomness
+      .trigger(~rst_n | SheepDragonCollision),
+      .seed({timer[5:0],player_pos[7:2]}^dragon_1), // Seed input for initializing randomness
       .ready(),
       .rdm_num(sheep_pos)
      );
@@ -934,12 +936,13 @@ module DragonTarget(
       input wire [7:0] dragon_pos,
       input wire [7:0] player_pos, 
       input wire [7:0] sheep_pos,
+      input wire rnd_timer,
       output wire [7:0] target_pos
 );
     
     reg [7:0] target_pos_reg;
     reg [2:0] DragonBehaviourState=0;
-    reg [2:0] NextDragonBehaviourState=0;
+    reg [2:0] NextDragonBehaviourState=2;
     reg dragon_ready;
 
     always @(posedge clk) begin
@@ -951,10 +954,12 @@ module DragonTarget(
           end
     
           end else begin
-            DragonBehaviourState <= 0;
+            DragonBehaviourState <= 2;
             dragon_ready<=0;
           end
     end
+
+    wire [7:0] inverse_sheep = {~sheep_pos[7:4], 4'b1100-sheep_pos[3:0]};
 
     always @(posedge clk) begin
 
@@ -962,20 +967,20 @@ module DragonTarget(
              
               case (DragonBehaviourState)
         
-                0: begin //chase the player
+                2: begin //chase the player
                   target_pos_reg <= player_pos;
-                  if (dragon_hurt | target_reached_player)  NextDragonBehaviourState <= 1; 
+                  if (dragon_hurt | target_reached_player)  NextDragonBehaviourState <= rnd_timer; 
                 end
         
-                1: begin // chase the sheep
+                0: begin // chase the sheep
                   target_pos_reg <= sheep_pos;
-                  if (dragon_hurt | target_reached_sheep) NextDragonBehaviourState <= 0;
+                  if (dragon_hurt | target_reached_sheep) NextDragonBehaviourState <= 1;
                 end
         
-//                2: begin // retreat to a corner (use two of the bits of the rng?
-//                    target_pos_reg <= 8'b1011_1011;
-//                    if (dragon_pos == 8'b1011_1011) NextDragonBehaviourState <= 0;
-//                end
+                1: begin // retreat to a corner (use two of the bits of the rng?
+                   target_pos_reg <= inverse_sheep;
+                   if (dragon_pos == inverse_sheep) NextDragonBehaviourState <= 2; // randomize target
+               end
         
                 default : begin 
                   target_pos_reg <= target_pos_reg;
@@ -983,7 +988,8 @@ module DragonTarget(
             endcase
               
               end else begin   
-                  target_pos_reg <= 0;
+                NextDragonBehaviourState <= 2;
+                target_pos_reg <= 0;
               end
       
 
@@ -1232,7 +1238,7 @@ module rng ( // random nuumber generator based on linear feedback + seed
     end
 
     always @(posedge clk) begin
-        rdm_num <= rand_buf1;
+        rdm_num <= (|rand_buf1)?rand_buf1:8'b11000011;
     end
     assign ready = ready_reg;
 
