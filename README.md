@@ -4,7 +4,7 @@
 
 ## What is the Tiny Tapestation ?
 
-In Summer 2023, five Electronics Students at the University of Sheffield, embarked on a research and design project: recreating a simple gaming system from the gate level,
+In Summer 2024, five Electronics Students at the University of Sheffield, embarked on a research and design project: recreating a simple gaming system from the gate level,
 building up an understanding of system design, semiconductors,  HDL programming, ASIC implementation and game design.
 
 ## How does it work? 
